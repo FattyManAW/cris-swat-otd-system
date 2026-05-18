@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRIS SWAT OTD 模擬工廠系統</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
+    .header { background: linear-gradient(135deg, #1a1f36 0%, #0d1117 100%); padding: 40px 20px; text-align: center; border-bottom: 2px solid #238636; }
+    .header h1 { font-size: 2rem; color: #f0f6fc; margin-bottom: 8px; }
+    .header p { color: #8b949e; font-size: 1rem; }
+    .badge { display: inline-block; background: #238636; color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin: 4px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    .section { margin-bottom: 40px; }
+    .section h2 { color: #58a6ff; font-size: 1.3rem; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
+    .card:hover { border-color: #58a6ff; }
+    .card h3 { color: #f0f6fc; font-size: 1.1rem; margin-bottom: 8px; }
+    .card p { color: #8b949e; font-size: 0.9rem; }
+    .card .lang { color: #238636; font-size: 0.8rem; font-family: monospace; }
+    .flow { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 24px; overflow-x: auto; }
+    .step { display: inline-flex; align-items: center; gap: 8px; margin: 4px; }
+    .step .dot { width: 12px; height: 12px; border-radius: 50%; background: #238636; }
+    .step .arrow { color: #8b949e; }
+    .step span { color: #c9d1d9; font-size: 0.9rem; }
+    .footer { text-align: center; padding: 30px; color: #484f58; font-size: 0.85rem; border-top: 1px solid #21262d; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏭 CRIS SWAT OTD 模擬工廠系統</h1>
+    <p>OpenClaw Agent 群驅動的完整接單到出貨可視化系統</p>
+    <div style="margin-top:12px">
+      <span class="badge">Phase 1 完成 ✅</span>
+      <span class="badge">11/11 任務 done</span>
+      <span class="badge">Python + FastAPI</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="section">
+      <h2>🔄 OTD 完整流程</h2>
+      <div class="flow">
+        <div class="step"><span class="dot"></span><span>詢單 Inquiry</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>ATP/CTP 試算</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>PO 接收</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>SO 建立</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>生產追蹤</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>ASN 發出</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>Pick/Pack/Ship</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>Invoice</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>Logistics</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>到貨</span></div>
+        <span class="arrow">→</span>
+        <div class="step"><span class="dot"></span><span>After Service</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📦 部署包內容</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>🤖 OTD Agent 群</h3>
+          <p>5 個 Agent 驅動 OTD 事件流程</p>
+          <p class="lang">Python + SOUL.md</p>
+        </div>
+        <div class="card">
+          <h3>🏢 ERP 模擬層</h3>
+          <p>FastAPI + SQLite，8 個模組介面</p>
+          <p class="lang">Python / FastAPI</p>
+        </div>
+        <div class="card">
+          <h3>🎨 視覺設計文件</h3>
+          <p>流程圖、色彩系統、儀表板設計</p>
+          <p class="lang">Markdown</p>
+        </div>
+        <div class="card">
+          <h3>📐 架構設計文件</h3>
+          <p>系統架構、ERP 設計、整合測試</p>
+          <p class="lang">Markdown</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📂 文件</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>📄 OTD 完整設計文件</h3>
+          <p>9 步驟完整流程圖、Webhook 事件驅動架構、Agent 驅動矩陣、系統總覽儀表板</p>
+        </div>
+        <div class="card">
+          <h3>🎨 流程可視化面板設計規範</h3>
+          <p>整體色彩系統、流程圖、卡片設計規範</p>
+        </div>
+        <div class="card">
+          <h3>💬 CS Agent 視覺設計</h3>
+          <p>客服流程視覺化、儀表板、通知模板設計</p>
+        </div>
+        <div class="card">
+          <h3>🏗️ OTD 整體系統架構設計</h3>
+          <p>OpenClaw Agent 群架構、事件驅動流程</p>
+        </div>
+        <div class="card">
+          <h3>💾 ERP 模擬層設計</h3>
+          <p>8 個模組介面定義、資料模型</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🔗 相關連結</h2>
+      <div class="card">
+        <h3>GitHub Repo</h3>
+        <p><a href="https://github.com/FattyManAW/cris-swat-otd-system" target="_blank">github.com/FattyManAW/cris-swat-otd-system</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    CRIS SWAT AI Team — Luna (lead), Vesper (架構), Vision (設計), Forge (開發) | 2026-05-18
+  </div>
+</body>
+</html>
