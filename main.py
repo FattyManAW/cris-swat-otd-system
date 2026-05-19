@@ -32,7 +32,26 @@ from schemas import (
 app = FastAPI(
     title="OTD ERP 模擬層",
     description="OTD 流程之 ERP 系統模擬介面，供各 Agent 統一讀寫",
-    version="1.0.0",
+    version="1.1.0",
+)
+
+# ── CORS — 允許前端面板跨域存取 ──
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8040",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://100.107.36.80:8040",
+        "http://100.107.36.80:8004",
+        "http://100.107.36.80:8000",
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 Base.metadata.create_all(bind=engine)
@@ -431,6 +450,11 @@ def get_shipping(shipping_id: str, db=Depends(get_db)):
     return s
 
 
+@app.get("/api/v1/shipping", response_model=list[ShippingRead])
+def list_shippings(db=Depends(get_db)):
+    return db.query(Shipping).all()
+
+
 @app.patch("/api/v1/shipping/{shipping_id}/pack", response_model=ShippingRead)
 def do_pack(shipping_id: str, pallet_count: int = Query(1, ge=0), db=Depends(get_db)):
     s = db.query(Shipping).filter(Shipping.shipping_id == shipping_id).first()
@@ -489,6 +513,11 @@ def get_invoice(invoice_id: str, db=Depends(get_db)):
     return inv
 
 
+@app.get("/api/v1/invoice", response_model=list[InvoiceRead])
+def list_invoices(db=Depends(get_db)):
+    return db.query(Invoice).all()
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 8. Logistics（物流）
 # ════════════════════════════════════════════════════════════════════════════
@@ -519,6 +548,11 @@ def get_logistics(tracking_no: str, db=Depends(get_db)):
     if not lg:
         raise HTTPException(404, f"物流單 {tracking_no} 不存在")
     return lg
+
+
+@app.get("/api/v1/logistics", response_model=list[LogisticsRead])
+def list_logistics(db=Depends(get_db)):
+    return db.query(Logistics).all()
 
 
 @app.post("/api/v1/logistics/{tracking_no}/arrive", response_model=LogisticsRead)

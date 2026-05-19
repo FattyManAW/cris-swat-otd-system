@@ -61,8 +61,7 @@
   <div class="panel"><h2>💵 發票狀態</h2><div class="chart-container"><canvas id="invChart"></canvas></div></div>
   <div class="panel"><h2>📋 物流狀態</h2><div class="chart-container"><canvas id="logChart"></canvas></div></div>
   <div class="panel full"><h2>🔄 OTD 流程轉換率</h2><div id="flow"></div></div>
-  <div class="panel"><h2>⚠️ 最近 ATP 庫存不足</h2><div id="atpTable"></div></div>
-  <div class="panel"><h2>📋 最近 SO</h2><div id="soTable"></div></div>
+  <div class="panel"><h2>📋 SO 狀態摘要</h2><div id="soTable"></div></div>
 </div>
 
 <script>
@@ -71,14 +70,14 @@ const DONUT_OPTS = { responsive: true, maintainAspectRatio: false, plugins: { le
 
 async function init() {
   try {
-    const [customers, items, pos, sos, atps, ctps, ships, invs, logs] = await Promise.all([
+    const [customers, items, pos, sos, ships, invs, logs] = await Promise.all([
       fetch(`${API}/customers`).then(r=>r.json()),
       fetch(`${API}/items`).then(r=>r.json()),
       fetch(`${API}/po`).then(r=>r.json()),
       fetch(`${API}/so`).then(r=>r.json()),
-      fetch(`${API}/atp/check`).then(r=>r.json()).catch(()=>[]),
-      fetch(`${API}/ctp/check`).then(r=>r.json()).catch(()=>[]),
-      fetch(`/docs`).then(r=>r.ok?r:null).catch(()=>null),  // fetch shipping via SO
+      fetch(`${API}/shipping`).then(r=>r.json()).catch(()=>[]),
+      fetch(`${API}/invoice`).then(r=>r.json()).catch(()=>[]),
+      fetch(`${API}/logistics`).then(r=>r.json()).catch(()=>[]),
     ]);
 
     // KPIs
@@ -95,20 +94,10 @@ async function init() {
     sos.forEach(s=>{ soCounts[s.status]= (soCounts[s.status]||0)+1; });
     new Chart(document.getElementById('soChart'),{type:'doughnut',data:{labels:Object.keys(soCounts),datasets:[{data:Object.values(soCounts),backgroundColor:['#4b8cff','#3cc97e','#f0b028','#a78bfa','#f44b55']}]},options:DONUT_OPTS});
 
-    // Fetch shipping/invoice/logistics via individual endpoints
-    let allShips=[], allInvs=[], allLogs=[];
-    try {
-      for (let s of sos.filter(s=>s.status!=='draft')) {
-        try {
-          const shipRes = await fetch(`${API}/shipping/SHIP-${s.so_id.slice(-8)}`);
-          if (shipRes.ok) allShips.push(await shipRes.json());
-        } catch(_){}
-        try {
-          const invRes = await fetch(`${API}/invoice/INV-${s.so_id.slice(-8)}`);
-          if (invRes.ok) allInvs.push(await invRes.json());
-        } catch(_){}
-      }
-    } catch(_){}
+    // Use list endpoints (CORS fixed)
+    let allShips = Array.isArray(ships) ? ships : [];
+    let allInvs = Array.isArray(invs) ? invs : [];
+    let allLogs = Array.isArray(logs) ? logs : [];
 
     // Ship status chart
     const shipCounts = {};
@@ -124,24 +113,6 @@ async function init() {
 
     // Logistics chart
     const logCounts = {};
-    try {
-      const shipsWithLog = allShips.filter(s=>s.tracking_no && s.status==='shipped');
-      for (let s of shipsWithLog) {
-        try {
-          const logRes = await fetch(`${API}/shipping/${s.shipping_id}`);
-          if (logRes.ok) {
-            const logData = await logRes.json();
-            if (logData.logistics) allLogs.push(logData.logistics);
-          }
-        } catch(_){}
-      }
-      if (!allLogs.length) {
-        // Fallback: try endpoints with LGT prefix
-        for (let i=200000;i<200050;i++) {
-          try { const r = await fetch(`${API}/logistics/LGT${i}`); if (r.ok) allLogs.push(await r.json()); } catch(_){}
-        }
-      }
-    } catch(_){}
     allLogs.forEach(l=>{ logCounts[l.status]= (logCounts[l.status]||0)+1; });
     if (Object.keys(logCounts).length) new Chart(document.getElementById('logChart'),{type:'doughnut',data:{labels:Object.keys(logCounts),datasets:[{data:Object.values(logCounts),backgroundColor:['#747a8c','#f0b028','#3cc97e','#a78bfa']}]},options:DONUT_OPTS});
     else document.getElementById('logChart').parentElement.innerHTML='<div class="loading">尚無物流資料</div>';
@@ -160,16 +131,11 @@ async function init() {
     ];
     document.getElementById('flow').innerHTML = stages.map(([name, val, total])=>`<div class="flow-row"><div class="flow-stage">${name}</div><div class="flow-value">${val}</div><div class="flow-bar"><div class="flow-fill" style="width:${(val/(total||1)*100).toFixed(0)}%"></div></div></div>`).join('');
 
-    // ATP insufficient
-    const atpBad = Array.isArray(atps) ? atps.filter(a=>a.result==='insufficient').slice(0,5) : [];
-    document.getElementById('atpTable').innerHTML = atpBad.length
-      ? '<table><tr><th>料號</th><th>需求量</th><th>可用量</th><th>結果</th></tr>'+atpBad.map(a=>`<tr><td>${a.item_code}</td><td>${a.qty || a.available_qty}</td><td>${a.available_qty || '?'}</td><td><span class="badge badge-err">不足</span></td></tr>`).join('')+'</table>'
-      : '<div class="loading">無庫存不足警示 ✅</div>';
-
-    // Recent SOs
-    const recentSOs = sos.slice(-10).reverse();
-    const statusBadge = s => ({draft:'badge-info',confirmed:'badge-ok',partial:'badge-warn',completed:'badge-ok',cancelled:'badge-err'}[s]);
-    document.getElementById('soTable').innerHTML = '<table><tr><th>SO No</th><th>客戶</th><th>狀態</th></tr>'+recentSOs.map(s=>`<tr><td>${s.so_id}</td><td>${s.customer_id}</td><td><span class="badge ${statusBadge(s.status)||'badge-info'}">${s.status}</span></td></tr>`).join('')+'</table>';
+    // 訂單統計摘要
+    const soStats = {};
+    sos.forEach(s=>{ soStats[s.status]=(soStats[s.status]||0)+1; });
+    document.getElementById('soTable').innerHTML = '<table><tr><th>狀態</th><th>數量</th></tr>'
+      + Object.entries(soStats).map(([k,v])=>`<tr><td><span class="badge ${({draft:'badge-info',confirmed:'badge-ok',partial:'badge-warn',completed:'badge-ok',cancelled:'badge-err'})[k]||'badge-info'}">${k}</span></td><td>${v}</td></tr>`).join('')+'</table>';
 
   } catch(e) {
     document.getElementById('kpi').innerHTML = `<div class="loading">⚠️ API 連線失敗: ${e.message}<br><small>請確認 API 伺服器已啟動 (port 8004)</small></div>`;
