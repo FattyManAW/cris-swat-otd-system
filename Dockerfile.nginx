@@ -1,0 +1,10 @@
+# ── OTD ERP Nginx 映像（含前端面板）─────────────────────────
+FROM nginx:alpine
+
+# 複製 OTD 前端面板
+COPY frontend/ /usr/share/nginx/html/
+
+# 預設 nginx config（可被 bind mount 覆蓋）
+COPY nginx.conf /etc/nginx/nginx.template.conf
+
+EXPOSE 8040

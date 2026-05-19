@@ -21,13 +21,15 @@ services:
       - "${PORT:-8004}:8004"
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    image: otd-nginx:latest
     container_name: otd-nginx
     ports:
       - "${NGINX_PORT:-8040}:8040"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend:/usr/share/nginx/html:ro
     depends_on:
       api:
         condition: service_healthy
