@@ -29,6 +29,8 @@ from schemas import (
 
 # ── Init ────────────────────────────────────────────────────────────────────
 
+from sqlalchemy.orm import Session
+
 app = FastAPI(
     title="OTD ERP 模擬層",
     description="OTD 流程之 ERP 系統模擬介面，供各 Agent 統一讀寫",
@@ -134,6 +136,11 @@ def list_pos(db=Depends(get_db)):
     return db.query(PurchaseOrder).all()
 
 
+@app.get("/api/v1/po/count")
+def po_count(db=Depends(get_db)):
+    return {"count": db.query(PurchaseOrder).count()}
+
+
 @app.get("/api/v1/po/{po_id}", response_model=PORead)
 def get_po(po_id: str, db=Depends(get_db)):
     po = db.query(PurchaseOrder).filter(PurchaseOrder.po_id == po_id).first()
@@ -222,6 +229,11 @@ def convert_po_to_so(po_id: str, so_id: Optional[str] = None, db=Depends(get_db)
 @app.get("/api/v1/so", response_model=list[SORead])
 def list_sos(db=Depends(get_db)):
     return db.query(SalesOrder).all()
+
+
+@app.get("/api/v1/so/count")
+def so_count(db=Depends(get_db)):
+    return {"count": db.query(SalesOrder).count()}
 
 
 @app.get("/api/v1/so/{so_id}", response_model=SORead)
@@ -442,17 +454,22 @@ def create_shipping(data: ShippingCreate, db=Depends(get_db)):
     return shipping
 
 
+@app.get("/api/v1/shipping", response_model=list[ShippingRead])
+def list_shippings(db=Depends(get_db)):
+    return db.query(Shipping).all()
+
+
+@app.get("/api/v1/shipping/count")
+def shipping_count(db=Depends(get_db)):
+    return {"count": db.query(Shipping).count()}
+
+
 @app.get("/api/v1/shipping/{shipping_id}", response_model=ShippingRead)
 def get_shipping(shipping_id: str, db=Depends(get_db)):
     s = db.query(Shipping).filter(Shipping.shipping_id == shipping_id).first()
     if not s:
         raise HTTPException(404, f"出貨單 {shipping_id} 不存在")
     return s
-
-
-@app.get("/api/v1/shipping", response_model=list[ShippingRead])
-def list_shippings(db=Depends(get_db)):
-    return db.query(Shipping).all()
 
 
 @app.patch("/api/v1/shipping/{shipping_id}/pack", response_model=ShippingRead)
@@ -505,17 +522,17 @@ def create_invoice(data: InvoiceCreate, db=Depends(get_db)):
     return invoice
 
 
-@app.get("/api/v1/invoice/{invoice_id}", response_model=InvoiceRead)
-def get_invoice(invoice_id: str, db=Depends(get_db)):
-    inv = db.query(Invoice).filter(Invoice.invoice_id == invoice_id).first()
-    if not inv:
-        raise HTTPException(404, f"發票 {invoice_id} 不存在")
-    return inv
-
-
 @app.get("/api/v1/invoice", response_model=list[InvoiceRead])
 def list_invoices(db=Depends(get_db)):
     return db.query(Invoice).all()
+
+
+@app.get("/api/v1/invoice/count")
+def invoice_count(db=Depends(get_db)):
+    return {"count": db.query(Invoice).count()}
+
+
+@app.get("/api/v1/invoice/{invoice_id}", response_model=InvoiceRead)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -542,17 +559,17 @@ def arrange_logistics(data: LogisticsCreate, db=Depends(get_db)):
     return logistics
 
 
-@app.get("/api/v1/logistics/{tracking_no}", response_model=LogisticsRead)
-def get_logistics(tracking_no: str, db=Depends(get_db)):
-    lg = db.query(Logistics).filter(Logistics.tracking_no == tracking_no).first()
-    if not lg:
-        raise HTTPException(404, f"物流單 {tracking_no} 不存在")
-    return lg
-
-
 @app.get("/api/v1/logistics", response_model=list[LogisticsRead])
 def list_logistics(db=Depends(get_db)):
     return db.query(Logistics).all()
+
+
+@app.get("/api/v1/logistics/count")
+def logistics_count(db=Depends(get_db)):
+    return {"count": db.query(Logistics).count()}
+
+
+@app.get("/api/v1/logistics/{tracking_no}", response_model=LogisticsRead)
 
 
 @app.post("/api/v1/logistics/{tracking_no}/arrive", response_model=LogisticsRead)
@@ -576,10 +593,37 @@ def confirm_arrival(tracking_no: str, db=Depends(get_db)):
 # Health & Info
 # ════════════════════════════════════════════════════════════════════════════
 
+import pathlib as _pl
+_GIT_COMMIT_FILE = _pl.Path(__file__).parent / "GIT_COMMIT"
+_GIT_COMMIT = _GIT_COMMIT_FILE.read_text().strip() if _GIT_COMMIT_FILE.exists() else "unknown"
+
+
 @app.get("/healthz", response_model=OkResponse)
 def healthz():
     return OkResponse(ok=True, message="OTD ERP Simulator is running")
 
+
+@app.get("/health")
+def health():
+    """Standard health endpoint — status + commit hash + DB check"""
+    db_ok = False
+    try:
+        db = next(get_db())
+        db.execute(Base.metadata.tables["items"].select().limit(1))
+        db_ok = True
+    except Exception:
+        pass
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "commit": _GIT_COMMIT,
+        "db": "ok" if db_ok else "error",
+        "version": "1.0.0",
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Count Endpoints (moved inline above ID-parameter routes)
+# ════════════════════════════════════════════════════════════════════════════
 
 @app.get("/", response_model=OkResponse)
 def root():
