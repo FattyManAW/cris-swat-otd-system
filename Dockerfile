@@ -1,0 +1,17 @@
+# ── OTD ERP 模擬層 Dockerfile ──────────────────────────────
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY *.py ./
+
+# Pre-seed database at build time
+RUN python3 seed_data.py
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=10s \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8004/healthz')"
+
+EXPOSE 8004
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8004"]

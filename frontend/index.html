@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTD ERP 流程監控面板</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1119; --card: #181b23; --border: #2e3140;
+      --t1: #f0f2f8; --t2: #e4e6ef; --t3: #747a8c;
+      --teal: #4b8cff; --success: #3cc97e; --warn: #f0b028; --error: #f44b55;
+      --surface: #22252f; --elevated: #2e3140;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--t2); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 14px; }
+    .header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 20px; color: var(--t1); font-weight: 700; }
+    .header span { color: var(--t3); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 24px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .kpi .label { color: var(--t3); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi .value { font-size: 32px; font-weight: 700; color: var(--t1); margin-top: 4px; }
+    .kpi .sub { color: var(--t3); font-size: 12px; margin-top: 4px; }
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 24px 24px; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .panel h2 { font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: 12px; }
+    .chart-container { position: relative; height: 250px; }
+    .full { grid-column: span 2; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .dot-ok { background: var(--success); } .dot-warn { background: var(--warn); } .dot-err { background: var(--error); }
+    .flow-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .flow-row:last-child { border: none; }
+    .flow-stage { width: 14%; font-size: 12px; font-weight: 600; color: var(--t3); }
+    .flow-value { width: 14%; font-size: 18px; font-weight: 700; color: var(--teal); }
+    .flow-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .flow-fill { height: 100%; border-radius: 3px; background: var(--teal); transition: width 0.5s; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; color: var(--t3); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-ok { background: rgba(60,201,126,0.15); color: var(--success); }
+    .badge-warn { background: rgba(240,176,40,0.15); color: var(--warn); }
+    .badge-err { background: rgba(244,75,85,0.15); color: var(--error); }
+    .badge-info { background: rgba(75,140,255,0.15); color: var(--teal); }
+    .loading { text-align: center; padding: 40px; color: var(--t3); }
+    .refresh { font-size: 12px; color: var(--t3); cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div><h1>📦 OTD ERP 流程監控面板</h1><span>Order-to-Delivery · 即時監控</span></div>
+  <div class="refresh" onclick="location.reload()">🔄 重新整理</div>
+</div>
+
+<div class="grid" id="kpi"></div>
+
+<div class="panels">
+  <div class="panel"><h2>📊 訂單狀態分布</h2><div class="chart-container"><canvas id="soChart"></canvas></div></div>
+  <div class="panel"><h2>🚚 出貨狀態</h2><div class="chart-container"><canvas id="shipChart"></canvas></div></div>
+  <div class="panel"><h2>💵 發票狀態</h2><div class="chart-container"><canvas id="invChart"></canvas></div></div>
+  <div class="panel"><h2>📋 物流狀態</h2><div class="chart-container"><canvas id="logChart"></canvas></div></div>
+  <div class="panel full"><h2>🔄 OTD 流程轉換率</h2><div id="flow"></div></div>
+  <div class="panel"><h2>⚠️ 最近 ATP 庫存不足</h2><div id="atpTable"></div></div>
+  <div class="panel"><h2>📋 最近 SO</h2><div id="soTable"></div></div>
+</div>
+
+<script>
+const API = '/api/v1';
+const DONUT_OPTS = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#747a8c', font: { size: 11 } } } } };
+
+async function init() {
+  try {
+    const [customers, items, pos, sos, atps, ctps, ships, invs, logs] = await Promise.all([
+      fetch(`${API}/customers`).then(r=>r.json()),
+      fetch(`${API}/items`).then(r=>r.json()),
+      fetch(`${API}/po`).then(r=>r.json()),
+      fetch(`${API}/so`).then(r=>r.json()),
+      fetch(`${API}/atp/check`).then(r=>r.json()).catch(()=>[]),
+      fetch(`${API}/ctp/check`).then(r=>r.json()).catch(()=>[]),
+      fetch(`/docs`).then(r=>r.ok?r:null).catch(()=>null),  // fetch shipping via SO
+    ]);
+
+    // KPIs
+    const soPending = sos.filter(s=>s.status==='draft').length;
+    const soActive = sos.filter(s=>['confirmed','partial'].includes(s.status)).length;
+    const kpi=[['客戶數', customers.length, '', 'dot-ok'],
+               ['料號數', items.length, '', 'dot-ok'],
+               ['採購單', pos.filter(p=>p.status==='pending').length, '待處理', 'dot-warn'],
+               ['銷售單', soActive, `${soPending} drafts`, soActive ? 'dot-ok' : 'dot-warn']];
+    document.getElementById('kpi').innerHTML = kpi.map(([l,v,s,c])=>`<div class="kpi"><div class="label">${l}</div><div class="value"><span class="status-dot ${c}"></span>${v}</div><div class="sub">${s}</div></div>`).join('');
+
+    // SO status chart
+    const soCounts = {};
+    sos.forEach(s=>{ soCounts[s.status]= (soCounts[s.status]||0)+1; });
+    new Chart(document.getElementById('soChart'),{type:'doughnut',data:{labels:Object.keys(soCounts),datasets:[{data:Object.values(soCounts),backgroundColor:['#4b8cff','#3cc97e','#f0b028','#a78bfa','#f44b55']}]},options:DONUT_OPTS});
+
+    // Fetch shipping/invoice/logistics via individual endpoints
+    let allShips=[], allInvs=[], allLogs=[];
+    try {
+      for (let s of sos.filter(s=>s.status!=='draft')) {
+        try {
+          const shipRes = await fetch(`${API}/shipping/SHIP-${s.so_id.slice(-8)}`);
+          if (shipRes.ok) allShips.push(await shipRes.json());
+        } catch(_){}
+        try {
+          const invRes = await fetch(`${API}/invoice/INV-${s.so_id.slice(-8)}`);
+          if (invRes.ok) allInvs.push(await invRes.json());
+        } catch(_){}
+      }
+    } catch(_){}
+
+    // Ship status chart
+    const shipCounts = {};
+    allShips.forEach(s=>{ shipCounts[s.status]= (shipCounts[s.status]||0)+1; });
+    if (Object.keys(shipCounts).length) new Chart(document.getElementById('shipChart'),{type:'doughnut',data:{labels:Object.keys(shipCounts),datasets:[{data:Object.values(shipCounts),backgroundColor:['#747a8c','#4b8cff','#f0b028','#3cc97e']}]},options:DONUT_OPTS});
+    else document.getElementById('shipChart').parentElement.innerHTML='<div class="loading">尚無出貨資料</div>';
+
+    // Invoice chart
+    const invCounts = {};
+    allInvs.forEach(i=>{ invCounts[i.status]= (invCounts[i.status]||0)+1; });
+    if (Object.keys(invCounts).length) new Chart(document.getElementById('invChart'),{type:'doughnut',data:{labels:Object.keys(invCounts),datasets:[{data:Object.values(invCounts),backgroundColor:['#747a8c','#4b8cff','#3cc97e']}]},options:DONUT_OPTS});
+    else document.getElementById('invChart').parentElement.innerHTML='<div class="loading">尚無發票資料</div>';
+
+    // Logistics chart
+    const logCounts = {};
+    try {
+      const shipsWithLog = allShips.filter(s=>s.tracking_no && s.status==='shipped');
+      for (let s of shipsWithLog) {
+        try {
+          const logRes = await fetch(`${API}/shipping/${s.shipping_id}`);
+          if (logRes.ok) {
+            const logData = await logRes.json();
+            if (logData.logistics) allLogs.push(logData.logistics);
+          }
+        } catch(_){}
+      }
+      if (!allLogs.length) {
+        // Fallback: try endpoints with LGT prefix
+        for (let i=200000;i<200050;i++) {
+          try { const r = await fetch(`${API}/logistics/LGT${i}`); if (r.ok) allLogs.push(await r.json()); } catch(_){}
+        }
+      }
+    } catch(_){}
+    allLogs.forEach(l=>{ logCounts[l.status]= (logCounts[l.status]||0)+1; });
+    if (Object.keys(logCounts).length) new Chart(document.getElementById('logChart'),{type:'doughnut',data:{labels:Object.keys(logCounts),datasets:[{data:Object.values(logCounts),backgroundColor:['#747a8c','#f0b028','#3cc97e','#a78bfa']}]},options:DONUT_OPTS});
+    else document.getElementById('logChart').parentElement.innerHTML='<div class="loading">尚無物流資料</div>';
+
+    // OTD flow
+    const totalSO = sos.length;
+    const confirmed = sos.filter(s=>['confirmed','partial','completed'].includes(s.status)).length;
+    const shipped = allShips.filter(s=>s.status==='shipped'||s.status==='delivered').length;
+    const invoiced = allInvs.filter(i=>i.status==='issued'||i.status==='paid').length;
+    const delivered = allShips.filter(s=>s.status==='delivered').length;
+    const stages = [
+      ['PO→SO', confirmed, totalSO],
+      ['SO→出貨', shipped, confirmed || 1],
+      ['出貨→發票', invoiced, shipped || 1],
+      ['發票→送達', delivered, invoiced || 1],
+    ];
+    document.getElementById('flow').innerHTML = stages.map(([name, val, total])=>`<div class="flow-row"><div class="flow-stage">${name}</div><div class="flow-value">${val}</div><div class="flow-bar"><div class="flow-fill" style="width:${(val/(total||1)*100).toFixed(0)}%"></div></div></div>`).join('');
+
+    // ATP insufficient
+    const atpBad = Array.isArray(atps) ? atps.filter(a=>a.result==='insufficient').slice(0,5) : [];
+    document.getElementById('atpTable').innerHTML = atpBad.length
+      ? '<table><tr><th>料號</th><th>需求量</th><th>可用量</th><th>結果</th></tr>'+atpBad.map(a=>`<tr><td>${a.item_code}</td><td>${a.qty || a.available_qty}</td><td>${a.available_qty || '?'}</td><td><span class="badge badge-err">不足</span></td></tr>`).join('')+'</table>'
+      : '<div class="loading">無庫存不足警示 ✅</div>';
+
+    // Recent SOs
+    const recentSOs = sos.slice(-10).reverse();
+    const statusBadge = s => ({draft:'badge-info',confirmed:'badge-ok',partial:'badge-warn',completed:'badge-ok',cancelled:'badge-err'}[s]);
+    document.getElementById('soTable').innerHTML = '<table><tr><th>SO No</th><th>客戶</th><th>狀態</th></tr>'+recentSOs.map(s=>`<tr><td>${s.so_id}</td><td>${s.customer_id}</td><td><span class="badge ${statusBadge(s.status)||'badge-info'}">${s.status}</span></td></tr>`).join('')+'</table>';
+
+  } catch(e) {
+    document.getElementById('kpi').innerHTML = `<div class="loading">⚠️ API 連線失敗: ${e.message}<br><small>請確認 API 伺服器已啟動 (port 8004)</small></div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
