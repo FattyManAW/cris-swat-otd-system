@@ -533,6 +533,11 @@ def invoice_count(db=Depends(get_db)):
 
 
 @app.get("/api/v1/invoice/{invoice_id}", response_model=InvoiceRead)
+def get_invoice(invoice_id: str, db=Depends(get_db)):
+    inv = db.query(Invoice).filter(Invoice.invoice_id == invoice_id).first()
+    if not inv:
+        raise HTTPException(404, f"發票 {invoice_id} 不存在")
+    return inv
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -570,6 +575,11 @@ def logistics_count(db=Depends(get_db)):
 
 
 @app.get("/api/v1/logistics/{tracking_no}", response_model=LogisticsRead)
+def get_logistics(tracking_no: str, db=Depends(get_db)):
+    lg = db.query(Logistics).filter(Logistics.tracking_no == tracking_no).first()
+    if not lg:
+        raise HTTPException(404, f"物流單 {tracking_no} 不存在")
+    return lg
 
 
 @app.post("/api/v1/logistics/{tracking_no}/arrive", response_model=LogisticsRead)
