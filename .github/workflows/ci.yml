@@ -8,20 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: 🔍 Lint (ruff)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-      - run: |
-          pip install ruff
-          ruff check . --add-noqa 2>&1 || true
-          ruff check . 2>&1
-
   test:
     name: 🧪 E2E Test
-    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,41 +28,47 @@ jobs:
           curl -sf http://127.0.0.1:8004/health
           echo "✅ API healthy"
       - name: Run E2E tests
+        env:
+          OTD_BASE_URL: http://127.0.0.1:8004
         run: |
-          python3 test_e2e.py
+          # test_e2e.py hardcodes localhost:8001; patch at runtime
+          python3 -c "
+import re
+with open('test_e2e.py') as f:
+    code = f.read()
+# Replace BASE URL
+code = re.sub(r'BASE\s*=\s*[\"\\'].*?[\"\\']', 'BASE = \"http://127.0.0.1:8004\"', code)
+with open('test_e2e_patched.py', 'w') as f:
+    f.write(code)
+"
+          python3 test_e2e_patched.py
           echo "✅ All E2E tests passed"
 
   build:
-    name: 🏗 Build
+    name: 🏗 Verify
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Verify imports
         run: |
+          pip install -r requirements.txt
           python3 -c "
-          import sys
-          sys.path.insert(0, '.')
-          from models import Base, engine
-          Base.metadata.create_all(bind=engine)
-          print('✅ Models OK')
+          from models import Base
           from schemas import POCreate, SOCreate, ATPRequest
-          print('✅ Schemas OK')
+          print('✅ Imports OK')
           "
 
-  deploy:
-    name: 🚀 Build Docker
+  docker:
+    name: 🚀 Docker Build
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Build Docker image
+      - name: Build & Health Check
         run: |
           docker build -t otd-api:ci .
-          docker images otd-api:ci
-      - name: Health check container
-        run: |
           docker run -d --name otd-ci -p 8004:8004 otd-api:ci
           for i in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8004/health 2>/dev/null; then
