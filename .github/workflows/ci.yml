@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: 🧪 E2E Test
+    name: E2E Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,26 +26,13 @@ jobs:
           python3 -m uvicorn main:app --host 0.0.0.0 --port 8004 &
           sleep 3
           curl -sf http://127.0.0.1:8004/health
-          echo "✅ API healthy"
       - name: Run E2E tests
-        env:
-          OTD_BASE_URL: http://127.0.0.1:8004
         run: |
-          # test_e2e.py hardcodes localhost:8001; patch at runtime
-          python3 -c "
-import re
-with open('test_e2e.py') as f:
-    code = f.read()
-# Replace BASE URL
-code = re.sub(r'BASE\s*=\s*[\"\\'].*?[\"\\']', 'BASE = \"http://127.0.0.1:8004\"', code)
-with open('test_e2e_patched.py', 'w') as f:
-    f.write(code)
-"
-          python3 test_e2e_patched.py
-          echo "✅ All E2E tests passed"
+          sed -i 's|localhost:8001|127.0.0.1:8004|g' test_e2e.py
+          python3 test_e2e.py
 
   build:
-    name: 🏗 Verify
+    name: Verify
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -56,23 +43,23 @@ with open('test_e2e_patched.py', 'w') as f:
           python3 -c "
           from models import Base
           from schemas import POCreate, SOCreate, ATPRequest
-          print('✅ Imports OK')
+          print('OK')
           "
 
   docker:
-    name: 🚀 Docker Build
+    name: Docker Build
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      - name: Build & Health Check
+      - name: Build and Health Check
         run: |
           docker build -t otd-api:ci .
           docker run -d --name otd-ci -p 8004:8004 otd-api:ci
           for i in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8004/health 2>/dev/null; then
-              echo "✅ Container healthy"
+              echo OK
               break
             fi
             sleep 2
