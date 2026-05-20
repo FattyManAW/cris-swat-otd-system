@@ -23,16 +23,6 @@ jobs:
     name: 🧪 E2E Test
     needs: lint
     runs-on: ubuntu-latest
-    services:
-      api:
-        image: python:3.9-slim
-        ports:
-          - 8004:8004
-        options: >-
-          --health-cmd "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8004/health\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
