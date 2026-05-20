@@ -1,0 +1,66 @@
+name: OTD CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: E2E Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install -r requirements.txt requests
+      - name: Seed DB
+        run: python3 seed_data.py
+      - name: Start API
+        run: |
+          python3 -m uvicorn main:app --host 0.0.0.0 --port 8004 &
+          sleep 3
+          curl -sf http://127.0.0.1:8004/health
+      - name: Smoketest endpoints
+        run: |
+          curl -sf http://127.0.0.1:8004/api/v1/items
+          curl -sf http://127.0.0.1:8004/api/v1/customers
+          curl -sf http://127.0.0.1:8004/api/v1/po/count
+          echo "All endpoints OK"
+
+  build:
+    name: Verify
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify imports
+        run: |
+          pip install -r requirements.txt
+          python3 -c "from models import Base; from schemas import POCreate; print('OK')"
+
+  docker:
+    name: Docker Build
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and Health Check
+        run: |
+          docker build -t otd-api:ci .
+          docker run -d --name otd-ci -p 8004:8004 otd-api:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8004/health 2>/dev/null; then
+              echo OK
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8004/health
+          docker stop otd-ci
