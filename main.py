@@ -1206,7 +1206,13 @@ def health():
         db_ok = True
     except Exception:
         pass
-    return {"status": "ok" if db_ok else "degraded", "commit": _GIT_COMMIT, "db": "ok" if db_ok else "error", "version": "1.0.0"}
+    import pathlib as _pl2
+    _gc = 'unknown'
+    try:
+        _gf = _pl2.Path(__file__).resolve().parent / 'GIT_COMMIT'
+        if _gf.exists(): _gc = _gf.read_text().strip()[:8]
+    except: pass
+    return {"status": "ok" if db_ok else "degraded", "commit": _gc, "db": "ok" if db_ok else "error", "version": "1.0.0"}
 
 
 @app.get("/healthz", response_model=OkResponse)
