@@ -1196,6 +1196,19 @@ def get_logistics_events(tracking_no: str, db=Depends(get_db)):
 # Health & Info
 # ════════════════════════════════════════════════════════════════════════════
 
+@app.get("/health")
+def health():
+    """Standard health endpoint — status + DB check."""
+    db_ok = False
+    try:
+        db = next(get_db())
+        db.execute(Base.metadata.tables["items"].select().limit(1))
+        db_ok = True
+    except Exception:
+        pass
+    return {"status": "ok" if db_ok else "degraded", "commit": _GIT_COMMIT, "db": "ok" if db_ok else "error", "version": "1.0.0"}
+
+
 @app.get("/healthz", response_model=OkResponse)
 def healthz():
     return OkResponse(ok=True, message="OTD ERP Simulator is running")
