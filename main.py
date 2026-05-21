@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
     ATPCheck,
@@ -100,6 +101,14 @@ app = FastAPI(
     title="OTD ERP 模擬層",
     description="OTD 流程之 ERP 系統模擬介面，供各 Agent 統一讀寫",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8040", "http://100.107.36.80:8040", "http://100.107.36.80:8080"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 Base.metadata.create_all(bind=engine)
