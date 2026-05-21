@@ -1,8 +1,7 @@
 """OTD ERP 模擬層 - 預設測試資料"""
 
-import os
-from datetime import datetime, timedelta
-from models import SessionLocal, engine, Base, Item, Customer
+from models import Base, Customer, Item, SessionLocal, engine
+
 
 def seed():
     Base.metadata.create_all(bind=engine)

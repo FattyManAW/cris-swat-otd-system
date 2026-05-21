@@ -8,12 +8,13 @@ PO-to-SO Agent — 訂單轉換專家
 或：python3 agent.py --demo    # 執行示範流程
 """
 
+import argparse
 import json
 import sys
-import argparse
-import requests
 from datetime import datetime
 from typing import Optional
+
+import requests
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 

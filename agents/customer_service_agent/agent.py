@@ -7,11 +7,12 @@ Customer Service Agent — 客戶溝通樞紐
 執行：python3 agent.py --demo
 """
 
-import json
 import argparse
-import requests
+import json
 from datetime import datetime
 from typing import Optional
+
+import requests
 
 ERP_BASE = "http://localhost:8001"
 AGENT_NAME = "Customer Service Agent"
@@ -69,7 +70,7 @@ class CustomerServiceAgent:
                 "event": "inquiry_reply",
                 "order_ref": order_ref,
                 "result": "rejected",
-                "content": f"抱歉，您的詢單中包含不存在的料號，請確認後重新查詢。",
+                "content": "抱歉，您的詢單中包含不存在的料號，請確認後重新查詢。",
                 "agent": AGENT_NAME,
             }
 
@@ -172,7 +173,7 @@ class CustomerServiceAgent:
         overall = max((r["result"] for r in atp_results), key=lambda x: {"on_time": 2, "delayed": 1, "insufficient": 0}.get(x, 0))
         conclusion = result_map.get(overall, overall)
 
-        content = f"您好，感謝您的詢單。\n\n"
+        content = "您好，感謝您的詢單。\n\n"
         for line in lines:
             content += line + "\n"
         content += f"\n{conclusion}"
@@ -203,12 +204,12 @@ def demo(agent):
         print(f"  Result: {result.get('event')} → {result.get('content', '')[:100]}")
 
     # ASN 示範
-    print(f"\n▶ ASN 發出")
+    print("\n▶ ASN 發出")
     result = agent.send_asn("E2E-SO-001", "E2E-SHP-001")
     print(f"  Result: {result}")
 
     # 客戶反饋
-    print(f"\n▶ 客戶反饋")
+    print("\n▶ 客戶反饋")
     result = agent.handle_customer_voice("PO-2026-001", "請問出貨了嗎？", "progress_inquiry")
     print(f"  Result: {result}")
 

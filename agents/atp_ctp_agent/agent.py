@@ -8,12 +8,13 @@ ATP/CTP Agent — 交期試算專家
 或：python3 agent.py --demo    # 執行示範流程
 """
 
+import argparse
 import json
 import sys
-import argparse
-import requests
 from datetime import datetime
 from typing import Optional
+
+import requests
 
 # ── 配置 ────────────────────────────────────────────────────────────────────
 
@@ -168,7 +169,7 @@ def demo(agent: ATPCTPAgent):
 
     # 總結
     print(f"\n{'='*60}")
-    print(f"總結報告")
+    print("總結報告")
     print(f"{'='*60}")
     for r in results:
         print(f"  {r['order_ref']} | {r['item_code']} x{r.get('available_qty','?')} | {r['final_result']} → {r.get('suggested_date','')}")

@@ -6,11 +6,12 @@ After Service Agent — 售後服務專家
 執行：python3 agent.py --demo
 """
 
-import json
 import argparse
-import requests
+import json
 from datetime import datetime
 from typing import Optional
+
+import requests
 
 ERP_BASE = "http://localhost:8001"
 AGENT_NAME = "After Service Agent"
@@ -82,7 +83,7 @@ class AfterServiceAgent:
         # 生成回覆
         reply = self._build_reply(ticket_id, order_ref, customer, feedback_type,
                                   content, priority, order_info)
-        print(f"\n  📧 回覆已生成")
+        print("\n  📧 回覆已生成")
 
         return reply
 
@@ -218,7 +219,7 @@ def demo(agent):
                             next_step="預計 2 小時內回覆")
 
     # 結案
-    print(f"\n▶ 結案 CV-DEMO-001")
+    print("\n▶ 結案 CV-DEMO-001")
     agent.resolve_ticket("CV-DEMO-001",
                          "已確認品質異常原因，安排更換新品，預計 3 個工作天內出貨",
                          order_ref="SO-2026-005")

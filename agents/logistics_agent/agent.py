@@ -11,12 +11,13 @@ v2.0: 串接 Shipping/Invoice/Logistics 深化端點
 執行：python3 agent.py --demo
 """
 
-import json
 import argparse
-import requests
+import json
 import uuid
 from datetime import datetime
 from typing import Optional
+
+import requests
 
 ERP_BASE = "http://localhost:8001"
 AGENT_NAME = "Logistics Agent"
@@ -189,7 +190,7 @@ class LogisticsAgent:
             steps["sign"] = self.deliver_sign(tk, signed_by)
         steps["trail"] = self.track_shipment_full(tk)
 
-        print(f"\n  ✅ 物流全鏈完成")
+        print("\n  ✅ 物流全鏈完成")
         return {"event": "logistics_complete", "tracking_no": tk, "steps": steps}
 
 
@@ -217,7 +218,7 @@ def demo(agent):
     agent.arrive(tk, "已送達洛杉磯配送中心")
 
     # 場景 3：海關扣留異常
-    print(f"\n▶ 異常場景：海關扣留")
+    print("\n▶ 異常場景：海關扣留")
     tk2 = "TRK-CUSTOMS-DEMO"
     agent._post("/api/v1/logistics/arrange", {
         "tracking_no": tk2, "shipping_id": "LGT-SHP-001", "carrier": "FedEx",
@@ -229,7 +230,7 @@ def demo(agent):
     agent.arrive(tk2, "已送達")
 
     # 場景 4：配送失敗 → 重排
-    print(f"\n▶ 異常場景：配送失敗 → 重排")
+    print("\n▶ 異常場景：配送失敗 → 重排")
     tk3 = "TRK-FAIL-DEMO"
     agent._post("/api/v1/logistics/arrange", {
         "tracking_no": tk3, "shipping_id": "LGT-SHP-001", "carrier": "UPS",
@@ -239,7 +240,7 @@ def demo(agent):
     agent.reroute(tk3, "FedEx", "更正地址後重新配送")
 
     # 場景 5：事件軌跡
-    print(f"\n▶ 事件軌跡")
+    print("\n▶ 事件軌跡")
     agent.track_shipment_full(tk)
 
     # 場景 6：進行中物流
