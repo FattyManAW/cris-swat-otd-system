@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTD ERP 操作引導系統</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Top Bar -->
+<header class="topbar">
+  <div class="logo">🖥️ OTD ERP</div>
+  <nav id="mainNav">
+    <a href="#dashboard" class="active" data-section="dashboard">📊 Dashboard</a>
+    <a href="#wizard" data-section="wizard">🧭 操作導引</a>
+    <a href="#process" data-section="process">📋 業務流程</a>
+    <a href="#api" data-section="api">🔌 API 參考</a>
+    <a href="#data" data-section="data">📦 資料總覽</a>
+  </nav>
+  <div class="status">
+    <div class="dot green" id="statusDot"></div>
+    <span id="statusText">連線中…</span>
+  </div>
+</header>
+
+<main class="container">
+
+<!-- ======================== DASHBOARD ======================== -->
+<section id="section-dashboard">
+  <h1 class="page-title">OTD ERP 操作儀表板</h1>
+  <p class="page-subtitle" id="apiBase">API: localhost:8040 | 啟動時間: —</p>
+
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card po"><div class="label">📋 採購單 PO</div><div class="value" id="kpi_po">—</div><div class="sub">pending / converted / cancelled</div></div>
+    <div class="kpi-card so"><div class="label">📝 銷售單 SO</div><div class="value" id="kpi_so">—</div><div class="sub">draft / confirmed / completed</div></div>
+    <div class="kpi-card shipping"><div class="label">🚚 出貨 Shipping</div><div class="value" id="kpi_shipping">—</div><div class="sub">pending / packing / shipped</div></div>
+    <div class="kpi-card invoice"><div class="label">🧾 發票 Invoice</div><div class="value" id="kpi_invoice">—</div><div class="sub">draft / issued / paid</div></div>
+    <div class="kpi-card items"><div class="label">📦 品項 Items</div><div class="value" id="kpi_items">—</div><div class="sub">active SKU</div></div>
+  </div>
+
+  <!-- L1: Quick Flow Guidance -->
+  <div class="process-flow" id="quickFlow">
+    <h2 class="flow-title">🚀 快速開始 — 四步驟完成第一筆訂單</h2>
+    <div class="quick-flow-cards" id="quickFlowCards">
+      <div class="qf-card active" data-target="wizard" data-step="2">
+        <div class="qf-step">1</div>
+        <div class="qf-icon">📋</div>
+        <div class="qf-name">建立採購單</div>
+        <div class="qf-desc">POST /api/v1/po</div>
+        <div class="qf-status" id="qf-status-1"><span class="qf-dot todo"></span>待開始</div>
+        <button class="qf-btn" onclick="jumpToWizard(2)">開始 ➜</button>
+      </div>
+      <div class="qf-card" data-target="wizard" data-step="4">
+        <div class="qf-step">2</div>
+        <div class="qf-icon">🔄</div>
+        <div class="qf-name">PO 轉銷售單</div>
+        <div class="qf-desc">POST /po/{id}/convert</div>
+        <div class="qf-status" id="qf-status-2"><span class="qf-dot todo"></span>待開始</div>
+        <button class="qf-btn" onclick="jumpToWizard(4)">開始 ➜</button>
+      </div>
+      <div class="qf-card" data-target="wizard" data-step="5">
+        <div class="qf-step">3</div>
+        <div class="qf-icon">🚚</div>
+        <div class="qf-name">安排出貨</div>
+        <div class="qf-desc">POST /shipping/create</div>
+        <div class="qf-status" id="qf-status-3"><span class="qf-dot todo"></span>待開始</div>
+        <button class="qf-btn" onclick="jumpToWizard(5)">開始 ➜</button>
+      </div>
+      <div class="qf-card" data-target="wizard" data-step="6">
+        <div class="qf-step">4</div>
+        <div class="qf-icon">🧾</div>
+        <div class="qf-name">開立發票</div>
+        <div class="qf-desc">POST /invoice/create</div>
+        <div class="qf-status" id="qf-status-4"><span class="qf-dot todo"></span>待開始</div>
+        <button class="qf-btn" onclick="jumpToWizard(6)">開始 ➜</button>
+      </div>
+    </div>
+    <p style="margin-top:16px;color:var(--text-muted);font-size:13px;text-align:center">
+      💡 點擊「開始」直接跳到對應步驟的完整操作指南（含 curl 指令範例）
+    </p>
+  </div>
+
+  <div class="data-section">
+    <h3>🟢 系統狀態</h3>
+    <table class="data-table">
+      <tr><th style="width:200px">項目</th><th>狀態</th></tr>
+      <tr><td>API Health</td><td id="sys_health">—</td></tr>
+      <tr><td>Database</td><td id="sys_db">—</td></tr>
+      <tr><td>Version</td><td id="sys_version">—</td></tr>
+      <tr><td>端點數</td><td id="sys_endpoints">33</td></tr>
+      <tr><td>API 文件</td><td><a href="http://localhost:8040/docs" target="_blank" style="color:var(--accent)">Swagger UI →</a></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ======================== WIZARD ======================== -->
+<section id="section-wizard" style="display:none">
+  <h1 class="page-title">🧭 逐步操作導引</h1>
+  <p class="page-subtitle">跟著步驟完成完整業務流程：採購→生產→銷售→出貨→收款</p>
+
+  <div class="wizard">
+    <div class="wizard-steps" id="wizardSteps">
+      <button class="wizard-step-btn active" data-step="1">1. 查詢品項</button>
+      <button class="wizard-step-btn" data-step="2">2. 建立採購單</button>
+      <button class="wizard-step-btn" data-step="3">3. ATP 可允諾量</button>
+      <button class="wizard-step-btn" data-step="4">4. PO 轉 SO</button>
+      <button class="wizard-step-btn" data-step="5">5. 安排出貨</button>
+      <button class="wizard-step-btn" data-step="6">6. 開立發票</button>
+      <button class="wizard-step-btn" data-step="7">7. 物流追蹤</button>
+    </div>
+    <div class="wizard-content" id="wizardContent">
+      <h3>步驟 1：查詢可用品項</h3>
+      <p>先確認系統中有哪些品項可以用。以下列出前 5 個品項供參考：</p>
+      <div class="api-path" id="wizApi"></div>
+      <div class="code-block" id="wizCode"></div>
+      <p id="wizResult" style="color:var(--success);font-size:13px;"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PROCESS ======================== -->
+<section id="section-process" style="display:none">
+  <h1 class="page-title">📋 業務流程總覽</h1>
+  <p class="page-subtitle">從採購到收款 — 完整 OTD (Order-To-Delivery) 生命週期</p>
+
+  <div class="process-flow">
+    <h2 class="flow-title">🔄 完整業務流程</h2>
+    <div class="flow-steps">
+      <div class="flow-step po"><div class="icon">PO</div><div class="name">採購單</div><div class="desc">建立 Purchase Order</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step atp"><div class="icon">ATP</div><div class="name">可允諾量</div><div class="desc">檢查庫存/產能</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step so"><div class="icon">SO</div><div class="name">銷售單</div><div class="desc">PO 轉換為 SO</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step ctp"><div class="icon">CTP</div><div class="name">產能承諾</div><div class="desc">生產排程確認</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step ship"><div class="icon">🚚</div><div class="name">出貨</div><div class="desc">包裝/海關/寄送</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step inv"><div class="icon">🧾</div><div class="name">發票</div><div class="desc">開立 Invoice</div></div>
+    </div>
+  </div>
+
+  <div class="data-section">
+    <h3>📖 各階段詳細說明</h3>
+    <table class="data-table">
+      <tr><th style="width:80px">階段</th><th style="width:160px">API</th><th>說明</th></tr>
+      <tr><td><strong>PO</strong></td><td><code>POST /api/v1/po</code></td><td>建立採購單，需指定 customer_id + lines (item_code/qty/delivery_date)</td></tr>
+      <tr><td><strong>ATP</strong></td><td><code>POST /api/v1/atp/check</code></td><td>ATP (Available-To-Promise)：檢查庫存可用量，回傳 on_time/delayed/insufficient</td></tr>
+      <tr><td><strong>SO</strong></td><td><code>POST /api/v1/po/{po_id}/convert</code></td><td>將採購單轉為銷售單，系統自動複製 lines</td></tr>
+      <tr><td><strong>CTP</strong></td><td><code>POST /api/v1/ctp/check</code></td><td>CTP (Capable-To-Promise)：檢查產能是否足夠，含 batch 建議</td></tr>
+      <tr><td><strong>Shipping</strong></td><td><code>POST /api/v1/shipping/create</code></td><td>建立出貨單 → pack → ship，可指定 pallet_count/container_type</td></tr>
+      <tr><td><strong>Invoice</strong></td><td><code>POST /api/v1/invoice/create</code></td><td>開立發票，需指定 so_id + amount</td></tr>
+      <tr><td><strong>Logistics</strong></td><td><code>POST /api/v1/logistics/arrange</code></td><td>安排物流，追蹤 tracking_no → 確認到貨</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ======================== API REFERENCE ======================== -->
+<section id="section-api" style="display:none">
+  <h1 class="page-title">🔌 API 快速參考</h1>
+  <p class="page-subtitle">33 個端點，6 大模組 — 完整 Swagger 文件：<a href="http://localhost:8040/docs" target="_blank" style="color:var(--accent)">localhost:8040/docs</a></p>
+
+  <div class="section-tabs" id="apiTabs">
+    <button class="section-tab active" data-module="items">📦 品項</button>
+    <button class="section-tab" data-module="po">📋 採購 PO</button>
+    <button class="section-tab" data-module="so">📝 銷售 SO</button>
+    <button class="section-tab" data-module="shipping">🚚 出貨</button>
+    <button class="section-tab" data-module="invoice">🧾 發票</button>
+    <button class="section-tab" data-module="atp">📊 ATP/CTP</button>
+    <button class="section-tab" data-module="logistics">🚛 物流</button>
+  </div>
+  <div class="api-ref">
+    <div class="api-grid" id="apiGrid"></div>
+  </div>
+</section>
+
+<!-- ======================== DATA OVERVIEW ======================== -->
+<section id="section-data" style="display:none">
+  <h1 class="page-title">📦 資料總覽</h1>
+  <p class="page-subtitle">即時查詢系統中所有業務資料</p>
+
+  <div class="section-tabs" id="dataTabs">
+    <button class="section-tab active" data-module="po-data">📋 採購單</button>
+    <button class="section-tab" data-module="so-data">📝 銷售單</button>
+    <button class="section-tab" data-module="shipping-data">🚚 出貨</button>
+    <button class="section-tab" data-module="invoice-data">🧾 發票</button>
+    <button class="section-tab" data-module="items-data">📦 品項</button>
+  </div>
+  <div class="data-section" id="dataContent">
+    <button class="refresh-btn" onclick="loadData('po')">🔄 重新整理</button>
+    <div id="dataTable"></div>
+  </div>
+</section>
+
+</main>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTD — AI Agent 驅動供應鏈自動化平台</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0c14; --card: #131620; --border: #1e2233;
+      --t1: #e8ecf4; --t2: #c4c9d8; --t3: #6b7194;
+      --accent: #5b8eff; --success: #3cc97e; --warn: #f0b028; --error: #f44b55;
+      --surface: #1a1e2b; --elevated: #22263a;
+      --agent: #a855f7; --auto: #06b6d4; --manual: #f59e0b;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg); color: var(--t2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 14px; line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header h1 { font-size: 20px; color: var(--t1); font-weight: 700; }
+    .header h1 span { color: var(--agent); font-size: 13px; margin-left: 12px; font-weight: 500; }
+    .header .right { display: flex; gap: 16px; align-items: center; }
+    .header .status { font-size: 12px; color: var(--t3); display: flex; align-items: center; gap: 6px; }
+    .dot { width:8px; height:8px; border-radius:50%; }
+    .dot-ok { background:var(--success); box-shadow: 0 0 6px var(--success); }
+
+    /* ── Layout ── */
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    /* ── Three Layer Hero ── */
+    .hero {
+      background: linear-gradient(135deg, var(--card) 0%, #0d1020 100%);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 36px 40px; margin-bottom: 24px;
+      text-align: center;
+    }
+    .hero h2 { font-size: 26px; font-weight: 800; color: var(--t1); margin-bottom: 8px; }
+    .hero p { color: var(--t3); font-size: 14px; margin-bottom: 32px; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+    .layer-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 0; }
+    .layer-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px 20px; text-align: center; transition: all .2s;
+    }
+    .layer-card:hover { transform: translateY(-3px); }
+    .layer-card.manual { border-color: var(--manual); }
+    .layer-card.agent { border-color: var(--agent); box-shadow: 0 0 30px rgba(168,85,247,.1); }
+    .layer-card.auto { border-color: var(--auto); }
+    .layer-icon { font-size: 40px; margin-bottom: 12px; }
+    .layer-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .layer-card.manual h3 { color: var(--manual); }
+    .layer-card.agent h3 { color: var(--agent); }
+    .layer-card.auto h3 { color: var(--auto); }
+    .layer-card .desc { font-size: 13px; color: var(--t3); line-height: 1.6; }
+    .layer-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 12px; }
+    .layer-badge .manual { background: rgba(245,158,11,.15); color: var(--manual); }
+    .layer-badge .agent { background: rgba(168,85,247,.15); color: var(--agent); }
+    .layer-badge .auto { background: rgba(6,182,212,.15); color: var(--auto); }
+
+    /* ── KPI ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .kpi .label { color: var(--t3); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+    .kpi .value { font-size: 30px; font-weight: 700; color: var(--t1); margin-top: 2px; }
+    .kpi .sub { color: var(--t3); font-size: 11px; margin-top: 2px; }
+
+    /* ── Agent Cards ── */
+    .section-title { font-size: 18px; font-weight: 700; color: var(--t1); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .agent-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .agent-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px; transition: all .2s;
+    }
+    .agent-card:hover { border-color: var(--agent); }
+    .agent-card .name { font-size: 16px; font-weight: 700; color: var(--agent); margin-bottom: 6px; }
+    .agent-card .role { font-size: 13px; color: var(--t3); margin-bottom: 10px; }
+    .agent-card .steps { font-size: 12px; color: var(--t3); line-height: 1.8; }
+    .agent-card .steps li { list-style: none; padding-left: 0; }
+    .agent-card .steps li::before { content: "▸ "; color: var(--agent); }
+
+    /* ── Flow Visualization ── */
+    .flow-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    .flow-diagram { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 16px 0; }
+    .flow-node {
+      min-width: 140px; padding: 16px 12px; background: var(--surface);
+      border-radius: 8px; border: 1px solid var(--border); text-align: center;
+      flex-shrink: 0;
+    }
+    .flow-node .icon { font-size: 24px; margin-bottom: 6px; }
+    .flow-node .n { font-size: 13px; font-weight: 700; color: var(--t1); }
+    .flow-node .agent-tag {
+      display: inline-block; padding: 1px 8px; border-radius: 8px;
+      font-size: 10px; font-weight: 600; margin-top: 6px;
+      background: rgba(168,85,247,.2); color: var(--agent);
+    }
+    .flow-arrow { font-size: 20px; color: var(--t3); margin: 0 4px; flex-shrink: 0; }
+
+    /* ── Manual Entry Form ── */
+    .form-panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px; }
+    .form-group label { font-size: 12px; color: var(--t3); font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 12px; color: var(--t1); font-size: 13px; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .9; }
+    .btn-agent { background: var(--agent); color: #fff; }
+    .btn-agent:hover { opacity: .9; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--t2); }
+    .btn-outline:hover { border-color: var(--accent); }
+    .result-box {
+      margin-top: 12px; padding: 12px; background: var(--surface); border-radius: 6px;
+      font-family: "SF Mono","Fira Code",monospace; font-size: 12px; color: var(--success);
+      display: none;
+    }
+    .result-box.error { color: var(--error); }
+
+    /* ── Panels ── */
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .panel h2 { font-size: 14px; font-weight: 600; color: var(--t1); margin-bottom: 12px; }
+    .chart-container { position: relative; height: 220px; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+    .tab { padding: 8px 18px; background: none; border: none; color: var(--t3); font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; font-weight: 500; }
+    .tab:hover { color: var(--t2); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Data Table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th { text-align: left; color: var(--t3); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-ok { background: rgba(60,201,126,.15); color: var(--success); }
+    .badge-warn { background: rgba(240,176,40,.15); color: var(--warn); }
+    .badge-err { background: rgba(244,75,85,.15); color: var(--error); }
+    .badge-info { background: rgba(91,142,255,.15); color: var(--accent); }
+    .badge-agent { background: rgba(168,85,247,.15); color: var(--agent); }
+    .badge-auto { background: rgba(6,182,212,.15); color: var(--auto); }
+
+    .loading { text-align: center; padding: 40px; color: var(--t3); }
+    .empty { text-align: center; padding: 32px; color: var(--t3); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1>📦 OTD 供應鏈自動化平台<span>AI Agent 驅動</span></h1></div>
+  <div class="right">
+    <div class="status"><div class="dot dot-ok" id="healthDot"></div><span id="healthText">API 8040</span></div>
+    <button class="btn btn-outline" onclick="location.reload()">🔄 重新整理</button>
+  </div>
+</div>
+
+<main class="container">
+
+<!-- ═══════════════ THREE-LAYER ARCHITECTURE ═══════════════ -->
+<div class="hero">
+  <h2>三層架構：手動 · Agent · 自動化</h2>
+  <p>OTD 不只是 ERP CRUD — 五個 AI Agent 協同驅動從採購到交付的完整供應鏈</p>
+  <div class="layer-cards">
+    <div class="layer-card manual">
+      <div class="layer-icon">🖐️</div>
+      <h3>手動層 Manual</h3>
+      <div class="desc">直接錄入 PO / SO / 出貨 / 發票<br>適合快速測試與異常處理</div>
+    </div>
+    <div class="layer-card agent">
+      <div class="layer-icon">🤖</div>
+      <h3>Agent 層 Agent-Driven</h3>
+      <div class="desc">5 個專職 Agent 協同作業<br>PO→SO 轉換 · ATP 試算 · 物流調度</div>
+    </div>
+    <div class="layer-card auto">
+      <div class="layer-icon">⚡</div>
+      <h3>自動化層 Automated</h3>
+      <div class="desc">全自動端到端流程<br>一鍵觸發：PO → 出貨 → 發票 → 到貨</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ KPI ═══════════════ -->
+<div class="kpi-grid" id="kpiGrid"></div>
+
+<!-- ═══════════════ AGENT ROLES ═══════════════ -->
+<h2 class="section-title">🤖 五個專職 AI Agent</h2>
+<div class="agent-grid" id="agentGrid"></div>
+
+<!-- ═══════════════ FLOW VISUALIZATION ═══════════════ -->
+<h2 class="section-title">🔄 AI Agent 全流程協作</h2>
+<div class="flow-panel">
+  <div class="flow-diagram">
+    <div class="flow-node">
+      <div class="icon">📋</div><div class="n">詢單接收</div>
+      <div class="agent-tag">客服 Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">🔍</div><div class="n">ATP/CTP 試算</div>
+      <div class="agent-tag">ATP Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">🔄</div><div class="n">PO → SO 轉換</div>
+      <div class="agent-tag">轉單 Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">🚚</div><div class="n">物流排程</div>
+      <div class="agent-tag">物流 Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">📦</div><div class="n">出貨追蹤</div>
+      <div class="agent-tag">物流 Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">🧾</div><div class="n">發票與收款</div>
+      <div class="agent-tag">客服 Agent</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="icon">💬</div><div class="n">售後服務</div>
+      <div class="agent-tag">售後 Agent</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MANUAL ENTRY ═══════════════ -->
+<h2 class="section-title">🖐️ 手動錄入介面</h2>
+<div class="form-panel">
+  <div class="tabs" id="formTabs">
+    <button class="tab active" data-form="po">📋 建立採購單</button>
+    <button class="tab" data-form="so">📝 建立銷售單</button>
+    <button class="tab" data-form="shipping">🚚 建立出貨</button>
+    <button class="tab" data-form="invoice">🧾 開立發票</button>
+  </div>
+
+  <div id="form-po">
+    <div class="form-row">
+      <div class="form-group"><label>採購單 ID</label><input id="po_id" placeholder="PO-2026-001"></div>
+      <div class="form-group"><label>客戶 ID</label><input id="po_cust" placeholder="CUST-001"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>品項代碼</label><input id="po_item" placeholder="SKU-ELE-001"></div>
+      <div class="form-group"><label>數量</label><input id="po_qty" type="number" value="100"></div>
+      <div class="form-group"><label>單價</label><input id="po_price" type="number" step="0.01" value="15.00"></div>
+      <div class="form-group"><label>交期</label><input id="po_date" type="date"></div>
+    </div>
+    <button class="btn btn-primary" onclick="manualCreatePO()">建立採購單</button>
+    <span style="margin-left:12px;color:var(--agent);font-size:12px">💡 也可以讓 Agent 自動建立：</span>
+    <button class="btn btn-agent" onclick="agentCreatePO()">🤖 Agent 自動建立</button>
+    <div class="result-box" id="poResult"></div>
+  </div>
+
+  <div id="form-so" style="display:none">
+    <div class="form-row">
+      <div class="form-group"><label>銷售單 ID</label><input id="so_id" placeholder="SO-2026-001"></div>
+      <div class="form-group"><label>客戶 ID</label><input id="so_cust" placeholder="CUST-001"></div>
+      <div class="form-group"><label>關聯 PO ID（可選）</label><input id="so_po" placeholder="PO-2026-001"></div>
+    </div>
+    <button class="btn btn-primary" onclick="manualCreateSO()">建立銷售單</button>
+    <span style="margin-left:12px;color:var(--agent);font-size:12px">💡 推薦：讓 Agent 從 PO 自動轉換</span>
+    <button class="btn btn-agent" onclick="agentConvertPO()">🤖 Agent PO→SO 轉換</button>
+    <div class="result-box" id="soResult"></div>
+  </div>
+
+  <div id="form-shipping" style="display:none">
+    <div class="form-row">
+      <div class="form-group"><label>出貨單 ID</label><input id="ship_id" placeholder="SHIP-2026-001"></div>
+      <div class="form-group"><label>關聯 SO ID</label><input id="ship_so" placeholder="SO-2026-001"></div>
+      <div class="form-group"><label>棧板數</label><input id="ship_pallets" type="number" value="1"></div>
+      <div class="form-group"><label>貨櫃類型</label><input id="ship_container" placeholder="40HQ"></div>
+    </div>
+    <button class="btn btn-primary" onclick="manualCreateShipping()">建立出貨單</button>
+    <div class="result-box" id="shipResult"></div>
+  </div>
+
+  <div id="form-invoice" style="display:none">
+    <div class="form-row">
+      <div class="form-group"><label>發票 ID</label><input id="inv_id" placeholder="INV-2026-001"></div>
+      <div class="form-group"><label>關聯 SO ID</label><input id="inv_so" placeholder="SO-2026-001"></div>
+      <div class="form-group"><label>關聯出貨 ID</label><input id="inv_ship" placeholder="SHIP-2026-001"></div>
+      <div class="form-group"><label>金額</label><input id="inv_amount" type="number" step="0.01" value="1500.00"></div>
+    </div>
+    <button class="btn btn-primary" onclick="manualCreateInvoice()">開立發票</button>
+    <div class="result-box" id="invResult"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ DATA & CHARTS ═══════════════ -->
+<div class="panels">
+  <div class="panel"><h2>📊 訂單狀態分布</h2><div class="chart-container"><canvas id="soChart"></canvas></div></div>
+  <div class="panel"><h2>🚚 出貨狀態</h2><div class="chart-container"><canvas id="shipChart"></canvas></div></div>
+  <div class="panel"><h2>💵 發票狀態</h2><div class="chart-container"><canvas id="invChart"></canvas></div></div>
+  <div class="panel"><h2>📋 物流狀態</h2><div class="chart-container"><canvas id="logChart"></canvas></div></div>
+</div>
+
+</main>
+
+<script>
+const API = '/api/v1';
+const DONUT_OPTS = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#6b7194', font: { size: 11 } } } } };
+
+// ── Agent Definitions ──
+const AGENTS = [
+  { id: 'customer_service', name: '客服溝通樞紐', icon: '💬', role: '從詢單接收到出貨通知的全程客戶互動', steps: ['詢單接收與記錄','進度追蹤與回覆','ASN 預出貨通知','Invoice 寄送','報關聯繫'] },
+  { id: 'atp_ctp', name: 'ATP/CTP 交期試算', icon: '🔍', role: '接收詢單需求，調用 ERP 進行交期試算', steps: ['ATP 可允諾量檢查','CTP 產能承諾分析','交期回覆與建議','庫存/產能不足警示'] },
+  { id: 'po_to_so', name: 'PO→SO 訂單轉換', icon: '🔄', role: '接收客戶 PO，自動建立 SO', steps: ['PO 接收與解析','料號對照與驗證','SO 單頭單身建立','問題料號回報'] },
+  { id: 'logistics', name: '物流處理專家', icon: '🚛', role: '全程物流流程處理', steps: ['報關文件生成','出貨排程確認','在途追蹤','到貨確認與簽收'] },
+  { id: 'after_service', name: '售後服務專家', icon: '🛡️', role: '客戶聲音與售後支援', steps: ['案件追蹤與管理','客戶滿意度管理','退換貨處理','品質回饋收集'] },
+];
+
+// ── Render Agent Cards ──
+document.getElementById('agentGrid').innerHTML = AGENTS.map(a => `
+  <div class="agent-card">
+    <div class="name">${a.icon} ${a.name}</div>
+    <div class="role">${a.role}</div>
+    <ul class="steps">${a.steps.map(s => `<li>${s}</li>`).join('')}</ul>
+  </div>
+`).join('');
+
+// ── Form Tabs ──
+document.getElementById('formTabs').addEventListener('click', e => {
+  if (!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('#formTabs .tab').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  ['po','so','shipping','invoice'].forEach(f => {
+    document.getElementById('form-'+f).style.display = f === e.target.dataset.form ? 'block' : 'none';
+  });
+});
+
+// ── Helper: show result ──
+function showResult(id, data, isError) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'result-box' + (isError ? ' error' : '');
+  el.textContent = JSON.stringify(data, null, 2);
+}
+
+// ── Manual CRUD ──
+async function manualCreatePO() {
+  const body = {
+    po_id: document.getElementById('po_id').value,
+    customer_id: document.getElementById('po_cust').value,
+    lines: [{
+      item_code: document.getElementById('po_item').value,
+      qty: parseInt(document.getElementById('po_qty').value),
+      unit_price: parseFloat(document.getElementById('po_price').value),
+      delivery_date: document.getElementById('po_date').value || undefined
+    }]
+  };
+  try {
+    const r = await fetch(API+'/po', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    showResult('poResult', d, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('poResult', {error:e.message}, true); }
+}
+
+async function agentCreatePO() {
+  // Simulated agent: create a PO with sample data
+  const ts = Date.now().toString(36).toUpperCase();
+  const body = {
+    po_id: `PO-AGENT-${ts}`,
+    customer_id: 'CUST-001',
+    remarks: '🤖 Agent 自動建立',
+    lines: [{ item_code: 'SKU-ELE-001', qty: 500, unit_price: 12.5, delivery_date: new Date(Date.now()+7*86400000).toISOString() }]
+  };
+  try {
+    const r = await fetch(API+'/po', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    showResult('poResult', {agent: '客服 Agent 自動建立採購單', result: d}, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('poResult', {error:e.message}, true); }
+}
+
+async function manualCreateSO() {
+  const body = {
+    so_id: document.getElementById('so_id').value,
+    customer_id: document.getElementById('so_cust').value,
+    po_id: document.getElementById('so_po').value || null,
+    lines: [{ item_code: 'SKU-ELE-001', qty: 100, unit_price: 15.0 }]
+  };
+  try {
+    const r = await fetch(API+'/so', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    showResult('soResult', d, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('soResult', {error:e.message}, true); }
+}
+
+async function agentConvertPO() {
+  // Use existing PO for the demo
+  const allPOs = await (await fetch(API+'/po')).json();
+  if (!allPOs.length) { showResult('soResult', {error:'尚無 PO，請先建立採購單'}, true); return; }
+  const po = allPOs[allPOs.length-1];
+  try {
+    const r = await fetch(API+'/po/'+po.po_id+'/convert?so_id=SO-AGENT-'+Date.now().toString(36), {method:'POST'});
+    const d = await r.json();
+    showResult('soResult', {agent: 'PO→SO Agent 自動轉換', source_po: po.po_id, result: d}, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('soResult', {error:e.message}, true); }
+}
+
+async function manualCreateShipping() {
+  const body = {
+    shipping_id: document.getElementById('ship_id').value,
+    so_id: document.getElementById('ship_so').value,
+    pallet_count: parseInt(document.getElementById('ship_pallets').value) || 0,
+    container_type: document.getElementById('ship_container').value
+  };
+  try {
+    const r = await fetch(API+'/shipping/create', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    showResult('shipResult', d, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('shipResult', {error:e.message}, true); }
+}
+
+async function manualCreateInvoice() {
+  const body = {
+    invoice_id: document.getElementById('inv_id').value,
+    so_id: document.getElementById('inv_so').value,
+    shipping_id: document.getElementById('inv_ship').value,
+    amount: parseFloat(document.getElementById('inv_amount').value)
+  };
+  try {
+    const r = await fetch(API+'/invoice/create', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    showResult('invResult', d, !r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 1500);
+  } catch(e) { showResult('invResult', {error:e.message}, true); }
+}
+
+// ── Dashboard Init ──
+async function init() {
+  try {
+    const [customers, items, pos, sos, ships, invs, logs] = await Promise.all([
+      fetch(API+'/customers').then(r=>r.json()),
+      fetch(API+'/items').then(r=>r.json()),
+      fetch(API+'/po').then(r=>r.json()),
+      fetch(API+'/so').then(r=>r.json()),
+      fetch(API+'/shipping').then(r=>r.json()).catch(()=>[]),
+      fetch(API+'/invoice').then(r=>r.json()).catch(()=>[]),
+      fetch(API+'/logistics').then(r=>r.json()).catch(()=>[]),
+    ]);
+
+    // Health
+    document.getElementById('healthText').textContent = `API 8040 · ${pos.length}PO ${sos.length}SO`;
+
+    // KPI
+    document.getElementById('kpiGrid').innerHTML = `
+      <div class="kpi"><div class="label">📋 採購單</div><div class="value">${pos.length}</div><div class="sub">PO</div></div>
+      <div class="kpi"><div class="label">📝 銷售單</div><div class="value">${sos.length}</div><div class="sub">SO</div></div>
+      <div class="kpi"><div class="label">🚚 出貨</div><div class="value">${ships.length}</div><div class="sub">Shipping</div></div>
+      <div class="kpi"><div class="label">🧾 發票</div><div class="value">${invs.length}</div><div class="sub">Invoice</div></div>
+    `;
+
+    // Charts
+    const makeDonut = (id, data, colors) => {
+      if (!data || !Object.keys(data).length) {
+        document.getElementById(id).parentElement.innerHTML = '<div class="empty">尚無資料</div>';
+        return;
+      }
+      new Chart(document.getElementById(id), { type:'doughnut', data:{ labels:Object.keys(data), datasets:[{ data:Object.values(data), backgroundColor:colors }] }, options:DONUT_OPTS });
+    };
+
+    const soStats = {}; sos.forEach(s=>{ soStats[s.status]=(soStats[s.status]||0)+1; });
+    makeDonut('soChart', soStats, ['#5b8eff','#3cc97e','#f0b028','#a855f7','#f44b55','#6b7194']);
+
+    const shipStats = {}; ships.forEach(s=>{ shipStats[s.status]=(shipStats[s.status]||0)+1; });
+    makeDonut('shipChart', shipStats, ['#6b7194','#f0b028','#06b6d4','#3cc97e']);
+
+    const invStats = {}; invs.forEach(i=>{ invStats[i.status]=(invStats[i.status]||0)+1; });
+    makeDonut('invChart', invStats, ['#6b7194','#06b6d4','#3cc97e']);
+
+    const logStats = {}; logs.forEach(l=>{ logStats[l.status]=(logStats[l.status]||0)+1; });
+    makeDonut('logChart', logStats, ['#6b7194','#f0b028','#06b6d4','#3cc97e','#a855f7']);
+
+    // Pre-fill date
+    document.getElementById('po_date').value = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+
+  } catch(e) {
+    document.getElementById('kpiGrid').innerHTML = `<div class="loading">⚠️ API 連線失敗: ${e.message}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>
