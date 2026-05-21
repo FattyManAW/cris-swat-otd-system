@@ -6,15 +6,33 @@ Matches actual model schema:
   Logistics: tracking_no PK
   PO/SO Lines: qty not quantity
 """
-import os, random, sys
+import os
+import random
+import sys
+import uuid as _uuid
 from datetime import datetime, timedelta
 
-import uuid as _uuid
-from models import SessionLocal, engine, Base
 from models import (
-    Item, Customer, PurchaseOrder, POLine, SalesOrder, SOLine,
-    ATPCheck, CTPCheck, Shipping, Invoice, Logistics,
-    POStatus, SOStatus, ShippingStatus, InvoiceStatus, LogisticsStatus, ATPResult,
+    ATPCheck,
+    ATPResult,
+    Base,
+    CTPCheck,
+    Customer,
+    Invoice,
+    InvoiceStatus,
+    Item,
+    Logistics,
+    LogisticsStatus,
+    POLine,
+    POStatus,
+    PurchaseOrder,
+    SalesOrder,
+    SessionLocal,
+    Shipping,
+    ShippingStatus,
+    SOLine,
+    SOStatus,
+    engine,
 )
 
 random.seed(42)

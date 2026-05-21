@@ -5,8 +5,6 @@ OTD 端對端整合測試
 執行：cd otd_erp_sim && python3 test_e2e.py
 """
 
-import json
-import time
 import requests
 
 BASE = "http://localhost:8001"
@@ -136,12 +134,12 @@ def test_5_so_lifecycle():
     r = req("PATCH", "/api/v1/so/E2E-SO-001", params={"status": "confirmed"})
     so = ok(r)
     assert so["status"] == "confirmed"
-    print(f"  SO confirmed ✅")
+    print("  SO confirmed ✅")
 
     r = req("PATCH", "/api/v1/so/E2E-SO-001", params={"status": "partial"})
     so = ok(r)
     assert so["status"] == "partial"
-    print(f"  SO partial ✅")
+    print("  SO partial ✅")
 
     print("  ✅ SO 狀態流轉完成")
 
@@ -189,18 +187,18 @@ def test_7_invoice():
     print(f"  發票 draft: {inv['invoice_id']} amount={inv['amount']}")
 
     # draft → issued
-    r = req("PATCH", f"/api/v1/invoice/E2E-INV-001/issue")
+    r = req("PATCH", "/api/v1/invoice/E2E-INV-001/issue")
     inv = ok(r)
     assert inv["status"] == "issued"
     print(f"  開立: status={inv['status']}")
 
     # send
-    r = req("POST", f"/api/v1/invoice/E2E-INV-001/send")
+    r = req("POST", "/api/v1/invoice/E2E-INV-001/send")
     inv = ok(r)
     assert inv["status"] == "sent"
     print(f"  寄送: status={inv['status']}")
 
-    r = req("GET", f"/api/v1/invoice/E2E-INV-001")
+    r = req("GET", "/api/v1/invoice/E2E-INV-001")
     ok(r)
     print("  發票查詢 ✅")
     print("  ✅ 發票完成")
@@ -310,7 +308,7 @@ if __name__ == "__main__":
         try:
             fn()
             passed += 1
-        except Exception as e:
+        except Exception:
             import traceback; traceback.print_exc()
             failed += 1
 

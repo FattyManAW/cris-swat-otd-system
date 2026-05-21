@@ -1,10 +1,21 @@
 """OTD ERP 模擬層 - 資料模型 (v2.0 — Shipping/Invoice/Logistics Deepened)"""
 
-from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Boolean, Text, Enum as SAEnum, create_engine
-from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 import enum
+from datetime import datetime
 
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 
 DATABASE_URL = "sqlite:///./otd_erp.db"
 

@@ -19,41 +19,79 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Depends
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, HTTPException, Query
 
 from models import (
-    Base, SessionLocal, engine,
-    Item, Customer, PurchaseOrder, POLine,
-    SalesOrder, SOLine, ATPCheck, CTPCheck,
-    Shipping, ShippingPackDetail, ShippingAttachment,
-    Invoice, InvoiceLine,
-    Logistics, LogisticsEvent,
-    POStatus, SOStatus, ATPResult, ShippingStatus, InvoiceStatus, LogisticsStatus
+    ATPCheck,
+    ATPResult,
+    Base,
+    CTPCheck,
+    Customer,
+    Invoice,
+    InvoiceLine,
+    InvoiceStatus,
+    Item,
+    Logistics,
+    LogisticsEvent,
+    LogisticsStatus,
+    POLine,
+    POStatus,
+    PurchaseOrder,
+    SalesOrder,
+    SessionLocal,
+    Shipping,
+    ShippingAttachment,
+    ShippingPackDetail,
+    ShippingStatus,
+    SOLine,
+    SOStatus,
+    engine,
 )
 from schemas import (
-    ItemCreate, ItemRead,
-    CustomerCreate, CustomerRead,
-    POCreate, PORead, POLineRead,
-    SOCreate, SORead, SOLineRead,
-    ATPRequest, ATPResponse,
+    ATPRequest,
+    ATPResponse,
     CTPResponse,
-    ShippingCreate, ShippingRead,
-    ShippingPackDetailCreate, ShippingPackDetailRead,
+    CustomerCreate,
+    CustomerRead,
+    InvoiceCreate,
+    InvoiceCreditNoteRequest,
+    InvoiceIssueRequest,
+    InvoiceLineRead,
+    InvoicePaymentRequest,
+    InvoiceRead,
+    InvoiceVoidRequest,
+    ItemCreate,
+    ItemRead,
+    LogisticsArriveRequest,
+    LogisticsCreate,
+    LogisticsCustomsClearRequest,
+    LogisticsCustomsHoldRequest,
+    LogisticsCustomsRequest,
+    LogisticsDeliverSignRequest,
+    LogisticsDepartRequest,
+    LogisticsEventCreate,
+    LogisticsEventRead,
+    LogisticsFailedRequest,
+    LogisticsPartialArriveRequest,
+    LogisticsRead,
+    LogisticsRerouteRequest,
+    OkResponse,
+    PartialDeliverRequest,
+    PartialShipRequest,
+    POCreate,
+    POLineRead,
+    PORead,
+    ShippingAttachmentCreate,
+    ShippingAttachmentRead,
+    ShippingCreate,
+    ShippingDeliverRequest,
+    ShippingPackDetailCreate,
+    ShippingPackDetailRead,
     ShippingPackPartialRequest,
-    ShippingAttachmentCreate, ShippingAttachmentRead,
-    PartialShipRequest, PartialDeliverRequest, ShippingDeliverRequest,
-    InvoiceCreate, InvoiceRead,
-    InvoiceLineCreate, InvoiceLineRead,
-    InvoiceIssueRequest, InvoicePaymentRequest,
-    InvoiceVoidRequest, InvoiceCreditNoteRequest,
-    LogisticsCreate, LogisticsRead,
-    LogisticsDepartRequest, LogisticsCustomsRequest,
-    LogisticsCustomsHoldRequest, LogisticsCustomsClearRequest,
-    LogisticsArriveRequest, LogisticsPartialArriveRequest,
-    LogisticsDeliverSignRequest, LogisticsFailedRequest, LogisticsRerouteRequest,
-    LogisticsEventCreate, LogisticsEventRead,
-    OkResponse
+    ShippingRead,
+    SOCreate,
+    SOLineRead,
+    SORead,
 )
 
 # ── Init ────────────────────────────────────────────────────────────────────
@@ -85,12 +123,12 @@ def gen_id(prefix: str) -> str:
 
 @app.get("/api/v1/items", response_model=list[ItemRead])
 def list_items(db=Depends(get_db)):
-    return db.query(Item).filter(Item.is_active == True).all()
+    return db.query(Item).filter(Item.is_active).all()
 
 
 @app.get("/api/v1/items/{item_code}", response_model=ItemRead)
 def get_item(item_code: str, db=Depends(get_db)):
-    item = db.query(Item).filter(Item.item_code == item_code, Item.is_active == True).first()
+    item = db.query(Item).filter(Item.item_code == item_code, Item.is_active).first()
     if not item:
         raise HTTPException(404, f"料號 {item_code} 不存在")
     return item
@@ -113,12 +151,12 @@ def create_item(data: ItemCreate, db=Depends(get_db)):
 
 @app.get("/api/v1/customers", response_model=list[CustomerRead])
 def list_customers(db=Depends(get_db)):
-    return db.query(Customer).filter(Customer.is_active == True).all()
+    return db.query(Customer).filter(Customer.is_active).all()
 
 
 @app.get("/api/v1/customers/{customer_id}", response_model=CustomerRead)
 def get_customer(customer_id: str, db=Depends(get_db)):
-    c = db.query(Customer).filter(Customer.customer_id == customer_id, Customer.is_active == True).first()
+    c = db.query(Customer).filter(Customer.customer_id == customer_id, Customer.is_active).first()
     if not c:
         raise HTTPException(404, f"客戶 {customer_id} 不存在")
     return c
@@ -316,7 +354,7 @@ def atp_check(
     force_delay: bool = Query(False),
     db=Depends(get_db),
 ):
-    item = db.query(Item).filter(Item.item_code == req.item_code, Item.is_active == True).first()
+    item = db.query(Item).filter(Item.item_code == req.item_code, Item.is_active).first()
     if not item:
         raise HTTPException(404, f"料號 {req.item_code} 不存在")
 
@@ -372,7 +410,7 @@ def ctp_check(
     force_delay: bool = Query(False),
     db=Depends(get_db),
 ):
-    item = db.query(Item).filter(Item.item_code == req.item_code, Item.is_active == True).first()
+    item = db.query(Item).filter(Item.item_code == req.item_code, Item.is_active).first()
     if not item:
         raise HTTPException(404, f"料號 {req.item_code} 不存在")
 

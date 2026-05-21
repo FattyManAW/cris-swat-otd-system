@@ -1,13 +1,18 @@
 """OTD ERP 模擬層 - Pydantic Schemas (v2.0 — Shipping/Invoice/Logistics Deepened)"""
 
 from datetime import datetime
-from typing import Optional, Literal
-from pydantic import BaseModel, Field
-from models import (
-    POStatus, SOStatus, ShippingStatus, InvoiceStatus, LogisticsStatus, ATPResult,
-    ShippingPackDetail, ShippingAttachment, InvoiceLine, LogisticsEvent,
-)
+from typing import Literal, Optional
 
+from pydantic import BaseModel, Field
+
+from models import (
+    ATPResult,
+    InvoiceStatus,
+    LogisticsStatus,
+    POStatus,
+    ShippingStatus,
+    SOStatus,
+)
 
 # ── Item ────────────────────────────────────────────────────────────────────
 

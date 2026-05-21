@@ -5,8 +5,6 @@ OTD v2.0 深化測試套件 — Shipping / Invoice / Logistics
 執行：cd otd_erp_sim && python3 test_e2e_v2.py
 """
 
-import json
-import time
 import requests
 
 BASE = "http://localhost:8001"

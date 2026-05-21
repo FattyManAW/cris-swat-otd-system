@@ -68,4 +68,18 @@ export const api = {
   // ── ATP / CTP ──
   checkATP: (itemCode, qty) => req(`/api/v1/atp/check?item_code=${encodeURIComponent(itemCode)}&quantity=${qty}`),
   checkCTP: (itemCode, qty, days) => req(`/api/v1/ctp/check?item_code=${encodeURIComponent(itemCode)}&quantity=${qty}&days=${days}`),
+
+  // ── Agent Simulate ──
+  simCustomer: () => req("/api/v1/atp/check", { method: "POST", body: JSON.stringify({ item_code: "ITEM-001", qty: 10, request_date: "2026-06-01T00:00:00" }) }),
+  simPOtoSO: () => req("/api/v1/po", { method: "POST", body: JSON.stringify({ po_id: "SIM-PO", customer_id: "CUST-001", lines: [{ item_code: "ITEM-001", qty: 10, unit_price: 100 }] }) }).then(r => r.po_id || r),
+  simLogistics: () => req("/api/v1/logistics/arrange", { method: "POST", body: JSON.stringify({ so_id: "SIM-SO", carrier: "DHL", estimated_departure: "2026-06-01" }) }),
+  simShipping: async () => {
+    const ship = await req("/api/v1/shipping/create", { method: "POST", body: JSON.stringify({ so_id: "SIM-SO" }) });
+    const id = ship.shipping_id || Object.values(ship)[0];
+    if (id) {
+      await req(`/api/v1/shipping/${id}/pack`, { method: "POST" });
+      await req(`/api/v1/shipping/${id}/ship`, { method: "POST" });
+    }
+    return ship;
+  },
 };

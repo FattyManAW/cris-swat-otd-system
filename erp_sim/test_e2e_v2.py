@@ -5,8 +5,6 @@ OTD v2.0 深化測試套件 — Shipping / Invoice / Logistics
 執行：cd otd_erp_sim && python3 test_e2e_v2.py
 """
 
-import json
-import time
 import requests
 
 BASE = "http://localhost:8001"
@@ -302,7 +300,7 @@ def test_8c_partial_delivery():
     """TC-08c 分批到貨"""
     print("\n=== TC-08c 分批到貨 ===")
     r = req("POST", "/api/v1/logistics/V2-TRK-003/arrive")
-    lg = ok(r)
+    ok(r)
 
     r2 = req("POST", "/api/v1/logistics/V2-TRK-003/partial_arrive", json={
         "delivered_qty": 50, "remaining_qty": 150, "note": "第一批到貨"
