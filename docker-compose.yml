@@ -12,7 +12,7 @@ services:
       - TZ=Asia/Taipei
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/healthz')"]
       interval: 30s
       timeout: 10s
       retries: 3

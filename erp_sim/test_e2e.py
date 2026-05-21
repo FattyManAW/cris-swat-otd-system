@@ -185,8 +185,20 @@ def test_7_invoice():
         "amount": 21000.0,
     })
     inv = ok(r)
+    assert inv["status"] == "draft"
+    print(f"  發票 draft: {inv['invoice_id']} amount={inv['amount']}")
+
+    # draft → issued
+    r = req("PATCH", f"/api/v1/invoice/E2E-INV-001/issue")
+    inv = ok(r)
     assert inv["status"] == "issued"
-    print(f"  發票: {inv['invoice_id']} amount={inv['amount']}")
+    print(f"  開立: status={inv['status']}")
+
+    # send
+    r = req("POST", f"/api/v1/invoice/E2E-INV-001/send")
+    inv = ok(r)
+    assert inv["status"] == "sent"
+    print(f"  寄送: status={inv['status']}")
 
     r = req("GET", f"/api/v1/invoice/E2E-INV-001")
     ok(r)

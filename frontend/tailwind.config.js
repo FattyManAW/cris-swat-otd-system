@@ -18,6 +18,7 @@ export default {
           green: 'var(--c-green)',
           amber: 'var(--c-amber)',
           red:   'var(--c-red)',
+          agent: 'var(--c-agent)',
         },
       },
     },

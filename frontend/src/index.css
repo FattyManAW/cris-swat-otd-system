@@ -4,15 +4,17 @@
 
 @layer base {
   :root {
-    --c-bg:     #0f1119;
-    --c-card:   #181b23;
-    --c-border: #2e3140;
-    --c-text:   #f0f2f8;
-    --c-muted:  #747a8c;
-    --c-accent: #4b8cff;
-    --c-green:  #3cc97e;
-    --c-amber:  #f0b028;
-    --c-red:    #f44b55;
+    /* Token Bridge: --c-* → --ds-* with fallback */
+    --c-bg:     var(--ds-c-bg, #0f1119);
+    --c-card:   var(--ds-c-surface, #181b23);
+    --c-border: var(--ds-c-border, #2e3140);
+    --c-text:   var(--ds-t1, #f0f2f8);
+    --c-muted:  var(--ds-t3, #747a8c);
+    --c-accent: var(--ds-c-teal, #4b8cff);
+    --c-green:  var(--ds-c-success, #3cc97e);
+    --c-amber:  var(--ds-c-warning, #f0b028);
+    --c-red:    var(--ds-c-error, #f44b55);
+    --c-agent:  var(--ds-c-violet, #a855f7);
     --c-sidebar-width: 220px;
   }
 
