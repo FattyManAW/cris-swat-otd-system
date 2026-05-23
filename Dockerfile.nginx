@@ -1,0 +1,16 @@
+# ── OTD ERP Nginx 映像（含前端面板）─────────────────────────
+FROM nginx:alpine
+
+# 複製 OTD 前端 build artifacts
+COPY frontend/dist/ /usr/share/nginx/html/
+
+# 複製 onboarding 操作引導（standalone）
+COPY nginx/onboarding/ /usr/share/nginx/html/onboarding/
+
+# 確保 nginx user 可讀 static files
+RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
+
+# 預設 nginx config（可被 bind mount 覆蓋）
+COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 8040

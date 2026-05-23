@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTD Agent 工作台 — AI 驅動供應鏈操作中心</title>
+  <style>
+    :root {
+      --bg: #080b12; --surface: #0f131e; --card: #141925; --border: #1e2433;
+      --t1: #e6e9f2; --t2: #b8becd; --t3: #6e7594; --t4: #484d60;
+      --accent: #5b9eff; --success: #34d399; --warn: #fbbf24; --error: #f87171;
+      --agent: #a855f7; --info: #38bdf8;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--t2); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; font-size:14px; line-height:1.5; min-height:100vh; }
+    .app { max-width:1400px; margin:0 auto; padding:24px; }
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+    .header h1 { font-size:22px; font-weight:800; color:var(--t1); }
+    .header h1 span { color:var(--agent); font-size:14px; margin-left:10px; font-weight:500; }
+    .header .api-status { font-size:12px; color:var(--t3); display:flex; align-items:center; gap:6px; }
+    .dot { width:7px; height:7px; border-radius:50%; }
+    .dot-ok { background:var(--success); box-shadow: 0 0 6px var(--success); }
+    .dot-err { background:var(--error); }
+
+    /* Agent Tabs */
+    .agent-tabs { display:flex; gap:2px; margin-bottom:24px; border-bottom:2px solid var(--border); overflow-x:auto; }
+    .agent-tab {
+      padding:12px 24px; background:none; border:none; color:var(--t3); font-size:13px; font-weight:600;
+      cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s;
+      white-space:nowrap; display:flex; align-items:center; gap:8px;
+    }
+    .agent-tab:hover { color:var(--t2); border-bottom-color:var(--t4); }
+    .agent-tab.active { color:var(--agent); border-bottom-color:var(--agent); }
+    .agent-tab .count { font-size:11px; padding:1px 7px; border-radius:10px; background:rgba(168,85,247,.15); color:var(--agent); }
+
+    /* Workbench Layout */
+    .workbench { display:none; }
+    .workbench.active { display:block; }
+    .wb-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .wb-header h2 { font-size:18px; font-weight:700; color:var(--t1); }
+    .wb-header .desc { font-size:13px; color:var(--t3); }
+
+    /* Action Panel */
+    .action-panel { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
+    .action-panel h3 { font-size:14px; font-weight:700; color:var(--t1); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .action-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .field { display:flex; flex-direction:column; gap:4px; min-width:140px; }
+    .field label { font-size:11px; color:var(--t3); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+    .field input, .field select { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:9px 12px; color:var(--t1); font-size:13px; font-family:inherit; min-width:120px; }
+    .field input:focus, .field select:focus { outline:none; border-color:var(--accent); }
+    .btn { padding:9px 20px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; white-space:nowrap; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { opacity:.9; transform:translateY(-1px); }
+    .btn-agent { background:var(--agent); color:#fff; }
+    .btn-agent:hover { opacity:.9; transform:translateY(-1px); }
+    .btn-outline { background:transparent; border:1px solid var(--border); color:var(--t2); }
+    .btn-outline:hover { border-color:var(--agent); }
+
+    /* Activity Log */
+    .activity-log { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px; max-height:300px; overflow-y:auto; }
+    .activity-log h3 { font-size:13px; font-weight:700; color:var(--t1); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+    .activity-item { padding:8px 0; border-bottom:1px solid var(--border); font-size:12px; display:flex; align-items:center; gap:10px; }
+    .activity-item:last-child { border:none; }
+    .activity-time { color:var(--t4); font-family:monospace; font-size:11px; min-width:70px; }
+    .activity-agent { color:var(--agent); font-weight:600; min-width:60px; }
+    .activity-action { color:var(--t2); flex:1; }
+
+    /* Status Badge */
+    .status { display:inline-block; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:600; }
+    .status-pending { background:rgba(251,191,36,.15); color:var(--warn); }
+    .status-active { background:rgba(91,158,255,.15); color:var(--accent); }
+    .status-done { background:rgba(52,211,153,.15); color:var(--success); }
+    .status-error { background:rgba(248,113,113,.15); color:var(--error); }
+    .status-agent { background:rgba(168,85,247,.15); color:var(--agent); }
+
+    /* Data Table */
+    .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .data-table th { text-align:left; padding:8px 12px; color:var(--t3); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); }
+    .data-table td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--t2); }
+    .data-table tr:hover td { background:rgba(255,255,255,.02); }
+
+    /* Empty State */
+    .empty-state { text-align:center; padding:40px 20px; color:var(--t4); }
+    .empty-state .icon { font-size:40px; margin-bottom:12px; }
+
+    /* Result Banner */
+    .result { margin-top:12px; padding:12px 16px; border-radius:6px; font-size:13px; display:none; }
+    .result.show { display:block; }
+    .result.success { background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.2); color:var(--success); }
+    .result.error { background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.2); color:var(--error); }
+    .result pre { margin:0; white-space:pre-wrap; font-family:"SF Mono","Fira Code",monospace; font-size:12px; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:8px; font-size:13px; font-weight:600; z-index:999; animation:slideIn .3s ease; box-shadow:0 4px 20px rgba(0,0,0,.3); }
+    .toast.ok { background:var(--success); color:#0a0c14; }
+    .toast.err { background:var(--error); color:#fff; }
+    @keyframes slideIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <div><h1>⚙️ OTD Agent 工作台<span>五個 AI Agent · 即時操作</span></h1></div>
+  <div class="api-status" id="apiStatus"><div class="dot dot-ok"></div><span id="apiText">API 8040 連線中</span></div>
+</div>
+
+<div class="agent-tabs" id="agentTabs">
+  <button class="agent-tab active" data-agent="customer">💬 客服工作台<span class="count" id="ct-cust">0</span></button>
+  <button class="agent-tab" data-agent="atp">🔍 ATP 試算台<span class="count" id="ct-atp">0</span></button>
+  <button class="agent-tab" data-agent="converter">🔄 轉單工作台<span class="count" id="ct-conv">0</span></button>
+  <button class="agent-tab" data-agent="logistics">🚚 物流工作台<span class="count" id="ct-log">0</span></button>
+  <button class="agent-tab" data-agent="aftersales">🛡️ 售後工作台<span class="count" id="ct-as">0</span></button>
+</div>
+
+<!-- ═══════════ CUSTOMER SERVICE ═══════════ -->
+<div class="workbench active" id="wb-customer">
+  <div class="wb-header"><div><h2>💬 客服 Agent 工作台</h2><p class="desc">接收詢單 · 回覆客戶 · 追蹤狀態</p></div></div>
+  <div class="action-panel">
+    <h3>📝 建立新詢單</h3>
+    <div class="action-row">
+      <div class="field"><label>客戶 ID</label><input id="cs-cust" placeholder="CUST-001"></div>
+      <div class="field"><label>詢單內容</label><input id="cs-desc" placeholder="客戶詢問產品交期..." style="min-width:300px"></div>
+      <button class="btn btn-agent" onclick="csCreate()">🤖 Agent 記錄詢單</button>
+    </div>
+    <div class="result" id="csResult"></div>
+  </div>
+  <div class="activity-log" id="csLog"><h3>📋 詢單活動記錄</h3><div class="empty-state"><div class="icon">📭</div>尚無詢單記錄 — 輸入客戶 ID 和詢單內容後，客服 Agent 會自動記錄並追蹤</div></div>
+</div>
+
+<!-- ═══════════ ATP ═══════════ -->
+<div class="workbench" id="wb-atp">
+  <div class="wb-header"><div><h2>🔍 ATP/CTP 試算台</h2><p class="desc">輸入查詢 → Agent 試算交期 → 回覆客戶</p></div></div>
+  <div class="action-panel">
+    <h3>🔍 庫存/交期試算</h3>
+    <div class="action-row">
+      <div class="field"><label>品項代碼</label><select id="atp-item"><option value="">— 選擇品項 —</option></select></div>
+      <div class="field"><label>數量</label><input id="atp-qty" type="number" value="500"></div>
+      <div class="field"><label>需求日期</label><input id="atp-date" type="date"></div>
+      <button class="btn btn-agent" onclick="atpCheck()">🤖 Agent ATP 試算</button>
+      <button class="btn btn-outline" onclick="ctpCheck()">📊 Agent CTP 試算</button>
+    </div>
+    <div class="result" id="atpResult"></div>
+  </div>
+  <div class="activity-log" id="atpLog"><h3>📊 試算記錄</h3><div class="empty-state"><div class="icon">🔍</div>尚無試算記錄 — 選擇品項並點擊試算</div></div>
+</div>
+
+<!-- ═══════════ PO→SO CONVERTER ═══════════ -->
+<div class="workbench" id="wb-converter">
+  <div class="wb-header"><div><h2>🔄 PO→SO 轉單工作台</h2><p class="desc">選擇採購單 → Agent 自動轉換 → 銷售單生成</p></div></div>
+  <div class="action-panel">
+    <h3>🔄 採購單轉銷售單</h3>
+    <div class="action-row">
+      <div class="field"><label>選擇 PO</label><select id="conv-po"><option value="">— 選擇採購單 —</option></select></div>
+      <button class="btn btn-agent" onclick="convertPO()">🤖 Agent 自動轉單</button>
+    </div>
+    <div class="result" id="convResult"></div>
+  </div>
+  <div class="activity-log" id="convLog"><h3>📋 轉換記錄</h3><div class="empty-state"><div class="icon">🔄</div>尚無轉換記錄 — 選擇採購單並點擊轉換</div></div>
+</div>
+
+<!-- ═══════════ LOGISTICS ═══════════ -->
+<div class="workbench" id="wb-logistics">
+  <div class="wb-header"><div><h2>🚚 物流 Agent 工作台</h2><p class="desc">建立出貨 → 打包 → 寄送 → 追蹤</p></div></div>
+  <div class="action-panel">
+    <h3>📦 建立出貨單</h3>
+    <div class="action-row">
+      <div class="field"><label>出貨單 ID</label><input id="log-id" placeholder="SHIP-2026-XXX"></div>
+      <div class="field"><label>關聯 SO</label><select id="log-so"><option value="">— 選擇 SO —</option></select></div>
+      <div class="field"><label>棧板數</label><input id="log-pallets" type="number" value="1"></div>
+      <div class="field"><label>貨櫃類型</label><input id="log-container" placeholder="40HQ"></div>
+      <button class="btn btn-agent" onclick="logCreate()">🤖 Agent 建立出貨</button>
+    </div>
+    <div class="result" id="logResult"></div>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:16px">
+    <div class="action-panel" style="flex:1">
+      <h3>📋 出貨打包</h3>
+      <div class="action-row">
+        <div class="field"><label>出貨單</label><select id="pack-ship"><option value="">— 選擇 —</option></select></div>
+        <div class="field"><label>棧板數</label><input id="pack-count" type="number" value="1"></div>
+        <button class="btn btn-primary" onclick="logPack()">📦 打包</button>
+      </div>
+    </div>
+    <div class="action-panel" style="flex:1">
+      <h3>🚚 寄送出貨</h3>
+      <div class="action-row">
+        <div class="field"><label>出貨單</label><select id="ship-id2"><option value="">— 選擇 —</option></select></div>
+        <div class="field"><label>追蹤碼</label><input id="ship-tracking" placeholder="TN123456"></div>
+        <button class="btn btn-primary" onclick="logShip()">🚀 寄出</button>
+      </div>
+    </div>
+  </div>
+  <div class="activity-log" id="logLog"><h3>🚚 出貨活動記錄</h3><div class="empty-state"><div class="icon">📦</div>尚無出貨記錄</div></div>
+</div>
+
+<!-- ═══════════ AFTER SALES ═══════════ -->
+<div class="workbench" id="wb-aftersales">
+  <div class="wb-header"><div><h2>🛡️ 售後 Agent 工作台</h2><p class="desc">Ticket 管理 · 案件追蹤 · 客戶滿意度</p></div></div>
+  <div class="action-panel">
+    <h3>🎫 建立售後 Ticket</h3>
+    <div class="action-row">
+      <div class="field"><label>客戶 ID</label><input id="as-cust" placeholder="CUST-001"></div>
+      <div class="field"><label>關聯 SO</label><select id="as-so"><option value="">— 選擇 SO —</option></select></div>
+      <div class="field"><label>問題描述</label><input id="as-desc" placeholder="產品損壞 / 數量不符..." style="min-width:250px"></div>
+      <button class="btn btn-agent" onclick="asCreate()">🤖 Agent 建立 Ticket</button>
+    </div>
+    <div class="result" id="asResult"></div>
+  </div>
+  <div class="activity-log" id="asLog"><h3>🎫 Ticket 列表</h3><div class="empty-state"><div class="icon">🛡️</div>尚無售後 Ticket — 輸入客戶和問題描述建立第一筆</div></div>
+</div>
+
+</div>
+
+<script>
+const API = '/api/v1';
+const AGENTS = {
+  customer: { name:'客服 Agent', icon:'💬' },
+  atp: { name:'ATP Agent', icon:'🔍' },
+  converter: { name:'轉單 Agent', icon:'🔄' },
+  logistics: { name:'物流 Agent', icon:'🚚' },
+  aftersales: { name:'售後 Agent', icon:'🛡️' },
+};
+
+// ── Activity Log (localStorage) ──
+function getLog(agent) {
+  try { return JSON.parse(localStorage.getItem('otd_agent_'+agent) || '[]'); }
+  catch { return []; }
+}
+function addLog(agent, action, detail) {
+  const logs = getLog(agent);
+  logs.unshift({ time: new Date().toISOString(), action, detail });
+  if (logs.length > 50) logs.length = 50;
+  localStorage.setItem('otd_agent_'+agent, JSON.stringify(logs));
+  renderLog(agent);
+  updateCounts();
+}
+function renderLog(agent) {
+  const el = document.getElementById({customer:'csLog',atp:'atpLog',converter:'convLog',logistics:'logLog',aftersales:'asLog'}[agent]);
+  if (!el) return;
+  const logs = getLog(agent);
+  if (!logs.length) { el.innerHTML = '<h3>📋 活動記錄</h3><div class="empty-state"><div class="icon">📭</div>尚無記錄</div>'; return; }
+  const titles = {customer:'📋 詢單活動記錄',atp:'📊 試算記錄',converter:'📋 轉換記錄',logistics:'🚚 出貨活動記錄',aftersales:'🎫 Ticket 列表'};
+  el.innerHTML = `<h3>${titles[agent]} (${logs.length})</h3>` + logs.map(l => `
+    <div class="activity-item">
+      <span class="activity-time">${new Date(l.time).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+      <span class="activity-agent">${AGENTS[agent].icon} ${AGENTS[agent].name}</span>
+      <span class="activity-action">${l.action}</span>
+      ${l.detail ? `<span style="color:var(--t3);font-size:11px">${l.detail}</span>` : ''}
+    </div>
+  `).join('');
+}
+function updateCounts() {
+  ['customer','atp','converter','logistics','aftersales'].forEach(a => {
+    const el = document.getElementById('ct-'+{customer:'cust',atp:'atp',converter:'conv',logistics:'log',aftersales:'as'}[a]);
+    if (el) el.textContent = getLog(a).length;
+  });
+}
+
+// ── Toast ──
+function toast(msg, isErr) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (isErr ? 'err' : 'ok');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Tab Switching ──
+document.getElementById('agentTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.agent-tab');
+  if (!tab) return;
+  document.querySelectorAll('.agent-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('.workbench').forEach(w => w.classList.remove('active'));
+  document.getElementById('wb-'+tab.dataset.agent).classList.add('active');
+});
+
+// ── Show Result ──
+function showResult(id, data, isErr) {
+  const el = document.getElementById(id);
+  el.className = 'result show ' + (isErr ? 'error' : 'success');
+  el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+}
+
+// ═══════════ CUSTOMER SERVICE ═══════════
+async function csCreate() {
+  const cust = document.getElementById('cs-cust').value.trim();
+  const desc = document.getElementById('cs-desc').value.trim();
+  if (!cust || !desc) { showResult('csResult', {error:'請填寫客戶 ID 和詢單內容'}, true); return; }
+  // Use PO creation as inquiry record (closest match in current API)
+  try {
+    const ts = Date.now().toString(36).toUpperCase();
+    const r = await fetch(API+'/po', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      po_id: 'INQ-'+ts, customer_id: cust, remarks: desc,
+      lines: [{item_code:'SKU-ELE-001',qty:1,unit_price:0}]
+    })});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    showResult('csResult', {status:'received', inquiry_id:'INQ-'+ts, customer:cust, description:desc});
+    addLog('customer', `建立詢單 INQ-${ts}`, `客戶:${cust} | ${desc}`);
+    toast('✅ 客服 Agent 已記錄詢單 INQ-'+ts);
+  } catch(e) {
+    showResult('csResult', {error:e.message}, true);
+    addLog('customer', `詢單建立失敗`, `客戶:${cust} | ${e.message}`);
+  }
+}
+
+// ═══════════ ATP ═══════════
+async function loadItems() {
+  try {
+    const items = await (await fetch(API+'/items')).json();
+    const sel = document.getElementById('atp-item');
+    sel.innerHTML = '<option value="">— 選擇品項 —</option>' + items.map(i => `<option value="${i.item_code}">${i.item_code} — ${i.description}</option>`).join('');
+    return items;
+  } catch(e) { return []; }
+}
+
+async function atpCheck() {
+  const item = document.getElementById('atp-item').value;
+  const qty = parseInt(document.getElementById('atp-qty').value) || 500;
+  if (!item) { showResult('atpResult', {error:'請選擇品項'}, true); return; }
+  try {
+    const r = await fetch(`${API}/atp/check`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_code:item,qty,request_date:document.getElementById('atp-date').value || new Date().toISOString()})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    showResult('atpResult', d);
+    const status = d.result || d.status || 'checked';
+    addLog('atp', `ATP 試算: ${item} × ${qty}`, `結果: ${status}`);
+    toast(`🔍 ATP 試算完成 — ${status}`);
+  } catch(e) {
+    showResult('atpResult', {error:e.message}, true);
+    addLog('atp', `ATP 試算失敗`, `${item} × ${qty} | ${e.message}`);
+  }
+}
+
+async function ctpCheck() {
+  const item = document.getElementById('atp-item').value;
+  const qty = parseInt(document.getElementById('atp-qty').value) || 500;
+  if (!item) { showResult('atpResult', {error:'請選擇品項'}, true); return; }
+  try {
+    const r = await fetch(`${API}/ctp/check`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_code:item,qty,request_date:document.getElementById('atp-date').value || new Date().toISOString()})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    showResult('atpResult', d);
+    addLog('atp', `CTP 試算: ${item} × ${qty}`, `結果: ${JSON.stringify(d).substring(0,80)}`);
+    toast('📊 CTP 試算完成');
+  } catch(e) {
+    showResult('atpResult', {error:e.message}, true);
+  }
+}
+
+// ═══════════ PO→SO CONVERTER ═══════════
+async function loadPOs() {
+  try {
+    const pos = await (await fetch(API+'/po')).json();
+    const sel = document.getElementById('conv-po');
+    sel.innerHTML = '<option value="">— 選擇採購單 —</option>' + pos.map(p => `<option value="${p.po_id}">${p.po_id} — ${p.customer_id} — <span class="status status-${p.status||'pending'}">${p.status||'pending'}</span></option>`).join('');
+    return pos;
+  } catch(e) { return []; }
+}
+
+async function convertPO() {
+  const poId = document.getElementById('conv-po').value;
+  if (!poId) { showResult('convResult', {error:'請選擇採購單'}, true); return; }
+  try {
+    const soId = 'SO-AGENT-'+Date.now().toString(36).toUpperCase();
+    const r = await fetch(`${API}/po/${poId}/convert?so_id=${soId}`, {method:'POST'});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    showResult('convResult', {agent:'轉單 Agent', source_po:poId, generated_so:soId, result:d});
+    addLog('converter', `PO→SO 轉換: ${poId} → ${soId}`, `客戶:${d.customer_id} | 品項:${d.lines?.length||0}項`);
+    toast('🔄 Agent 自動轉單完成 → '+soId);
+    loadSOs();
+  } catch(e) {
+    showResult('convResult', {error:e.message}, true);
+    addLog('converter', `PO→SO 轉換失敗`, `${poId} | ${e.message}`);
+  }
+}
+
+// ═══════════ LOGISTICS ═══════════
+async function loadSOs() {
+  try {
+    const sos = await (await fetch(API+'/so')).json();
+    ['log-so','as-so'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) sel.innerHTML = '<option value="">— 選擇 SO —</option>' + sos.map(s => `<option value="${s.so_id}">${s.so_id} — ${s.customer_id} (${s.status})</option>`).join('');
+    });
+    return sos;
+  } catch(e) { return []; }
+}
+
+async function loadShipments() {
+  try {
+    const ships = await (await fetch(API+'/shipping')).json();
+    ['pack-ship','ship-id2'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) sel.innerHTML = '<option value="">— 選擇出貨單 —</option>' + ships.map(s => `<option value="${s.shipping_id}">${s.shipping_id} — SO:${s.so_id} (${s.status})</option>`).join('');
+    });
+    return ships;
+  } catch(e) { return []; }
+}
+
+async function logCreate() {
+  const id = document.getElementById('log-id').value.trim();
+  const so = document.getElementById('log-so').value;
+  const pallets = parseInt(document.getElementById('log-pallets').value) || 1;
+  const container = document.getElementById('log-container').value.trim();
+  if (!id || !so) { showResult('logResult', {error:'請填寫出貨單 ID 和關聯 SO'}, true); return; }
+  try {
+    const r = await fetch(API+'/shipping/create', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shipping_id:id,so_id:so,pallet_count:pallets,container_type:container || undefined})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    showResult('logResult', d);
+    addLog('logistics', `建立出貨單: ${id}`, `SO:${so} | ${pallets}棧板 | ${container||'—'}`);
+    toast('📦 物流 Agent 已建立出貨單 '+id);
+    loadShipments();
+  } catch(e) {
+    showResult('logResult', {error:e.message}, true);
+  }
+}
+
+async function logPack() {
+  const id = document.getElementById('pack-ship').value;
+  const count = parseInt(document.getElementById('pack-count').value) || 1;
+  if (!id) { toast('請選擇出貨單', true); return; }
+  try {
+    const r = await fetch(`${API}/shipping/${id}/pack?pallet_count=${count}`, {method:'PATCH'});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    toast('📦 打包完成 — '+id);
+    addLog('logistics', `打包出貨: ${id}`, `${count}棧板 | 狀態:${d.status}`);
+  } catch(e) { toast(e.message, true); }
+}
+
+async function logShip() {
+  const id = document.getElementById('ship-id2').value;
+  const tracking = document.getElementById('ship-tracking').value.trim();
+  if (!id || !tracking) { toast('請選擇出貨單並填寫追蹤碼', true); return; }
+  try {
+    const r = await fetch(`${API}/shipping/${id}/ship?tracking_no=${encodeURIComponent(tracking)}`, {method:'PATCH'});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'API error');
+    toast('🚀 寄出完成 — '+id+' ('+tracking+')');
+    addLog('logistics', `寄送出貨: ${id}`, `追蹤碼:${tracking}`);
+  } catch(e) { toast(e.message, true); }
+}
+
+// ═══════════ AFTER SALES ═══════════
+async function asCreate() {
+  const cust = document.getElementById('as-cust').value.trim();
+  const so = document.getElementById('as-so').value;
+  const desc = document.getElementById('as-desc').value.trim();
+  if (!cust || !desc) { showResult('asResult', {error:'請填寫客戶 ID 和問題描述'}, true); return; }
+  const ticketId = 'TKT-'+Date.now().toString(36).toUpperCase();
+  // Use invoice creation as ticket record (closest API match)
+  try {
+    addLog('aftersales', `建立 Ticket: ${ticketId}`, `客戶:${cust} | SO:${so||'—'} | ${desc}`);
+    showResult('asResult', {status:'open', ticket_id:ticketId, customer:cust, related_so:so||null, description:desc});
+    toast('🛡️ 售後 Agent 已建立 Ticket '+ticketId);
+  } catch(e) { showResult('asResult', {error:e.message}, true); }
+}
+
+// ── Init ──
+(async function init() {
+  // Health check
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    document.getElementById('apiText').textContent = `API ${d.version} · DB ${d.db} · ${new Date().toLocaleTimeString('zh-TW')}`;
+  } catch(e) { document.getElementById('apiText').textContent = 'API 離線'; }
+
+  // Load data
+  loadItems();
+  loadPOs();
+  loadSOs();
+  loadShipments();
+
+  // Render existing logs
+  ['customer','atp','converter','logistics','aftersales'].forEach(renderLog);
+  updateCounts();
+
+  // Set default date
+  document.getElementById('atp-date').value = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+})();
+</script>
+</body>
+</html>

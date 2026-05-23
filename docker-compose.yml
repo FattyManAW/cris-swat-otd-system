@@ -1,0 +1,36 @@
+# ── OTD ERP 模擬層 docker-compose.yml ────────────────────────
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    image: otd-api:latest
+    container_name: otd-api
+    environment:
+      - TZ=Asia/Taipei
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    ports:
+      - "${PORT:-8004}:8004"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    image: otd-nginx:latest
+    container_name: otd-nginx
+    ports:
+      - "${NGINX_PORT:-8040}:8040"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

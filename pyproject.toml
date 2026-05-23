@@ -1,0 +1,41 @@
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long
+    "E402",  # import not at top (config-after-import pattern)
+    "B008",  # function calls in argument defaults (FastAPI Depends)
+    "F401",  # unused imports (legacy)
+    "F821",  # undefined name (legacy)
+    "E721",  # type comparison
+    "E722",  # bare except
+    "B017",  # assertRaises(Exception)
+    "B904",  # raise without from
+    "E701",  # multiple statements
+    "E702",  # multiple expressions
+    "B007",  # unused loop variable
+    "F841",  # local variable assigned but never used (test helpers)
+    "E741",  # ambiguous variable name (l in test comprehensions)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+known-first-party = ["agents", "erp_sim"]
+
+[tool.ruff.lint.per-file-ignores]
+"test_e2e.py" = ["I001"]
+"erp_sim/test_e2e.py" = ["I001"]
