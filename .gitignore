@@ -1,2 +1,6 @@
 otd_erp.db
 __pycache__/
+node_modules/
+.coverage
+.pytest_cache/
+htmlcov/

@@ -238,6 +238,36 @@ class TestMainSOCRUD:
         assert r.status_code == 400
         assert "已轉換" in r.json()["detail"]
 
+    def test_convert_cancelled_po(self, client):
+        """L239-240: cancelled PO → convert 400"""
+        # Create PO → convert to SO → we only test that CANCELLED status blocks convert
+        # The app doesn't have a cancel-PO endpoint, so we test through direct DB
+        # Test via the update_so 404 path: convert a non-existent PO
+        client.post("/api/v1/items", json={
+            "item_code": "CPU-CC2", "description": "Cancelled PO CPU", "unit": "PC",
+        })
+        client.post("/api/v1/customers", json={
+            "customer_id": "CUST-CC2", "name": "Cancelled PO 客戶",
+        })
+        client.post("/api/v1/po", json={
+            "po_id": "PO-CC2", "customer_id": "CUST-CC2",
+            "lines": [{"item_code": "CPU-CC2", "qty": 1, "unit_price": 1.0, "line_no": 1}],
+        })
+        # The app doesn't expose a cancel-PO PATCH, but we can test the CANCELLED guard
+        # via SQLAlchemy direct: set status to CANCELLED, then try convert
+        from erp_sim.models import SessionLocal as SL, PurchaseOrder, POStatus
+        db = SL()
+        try:
+            po = db.query(PurchaseOrder).filter(PurchaseOrder.po_id == "PO-CC2").first()
+            if po:
+                po.status = POStatus.CANCELLED
+                db.commit()
+        finally:
+            db.close()
+        r = client.post("/api/v1/po/PO-CC2/convert")
+        assert r.status_code == 400
+        assert "已取消" in r.json()["detail"]
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # Negative-path / edge-case coverage — targets main.py 85% → 95%+
@@ -520,6 +550,26 @@ class TestShippingEdgeCases:
         })
         assert r.status_code == 400
 
+    def test_partial_ship_wrong_status(self, client):
+        """L623: partial_ship 400 when status is PENDING"""
+        client.post("/api/v1/shipping/create", json={
+            "shipping_id": "SH-PSBAD", "so_id": self.so_id, "pallet_count": 0, "container_type": "20GP",
+        })
+        # Status is PENDING, partial_ship should return 400
+        r = client.patch("/api/v1/shipping/SH-PSBAD/partial_ship", json={
+            "remaining_qty": 0, "remarks": "test",
+        })
+        assert r.status_code == 400
+        assert "狀態為" in r.json()["detail"]
+
+    def test_attach_shipping_not_found(self, client):
+        """L691: attach_shipping_doc 404 for non-existent shipping"""
+        r = client.post("/api/v1/shipping/NONEXIST/attach", json={
+            "attachment_id": "ATT-404X", "type": "pod", "filename": "test.pdf",
+            "url": "https://example.com/test.pdf",
+        })
+        assert r.status_code == 404
+
     def test_attachments_not_found(self, client):
         """L722: get_attachments 404"""
         r = client.get("/api/v1/shipping/NONEXIST/attachments")
@@ -715,9 +765,17 @@ class TestLogisticsEdgeCases:
         assert any(lg["tracking_no"] == "TRK-ACTIVE" for lg in results)
 
     def test_get_logistics_not_found(self, client):
-        """L993-996: get_logistics 404"""
+        """L983-986: get_logistics 404"""
         r = client.get("/api/v1/logistics/NONEXIST")
         assert r.status_code == 404
+
+    def test_get_logistics_success(self, client):
+        """L987: get_logistics success (return existing logistics)"""
+        self._arrange(client, "TRK-FOUND")
+        r = client.get("/api/v1/logistics/TRK-FOUND")
+        assert r.status_code == 200
+        assert r.json()["tracking_no"] == "TRK-FOUND"
+        assert r.json()["carrier"] == "MAERSK"
 
     def test_depart_not_found(self, client):
         """L1003: depart 404"""
@@ -972,6 +1030,14 @@ class TestSoCrossCheck:
             "lines": [{"item_code": "CPU-001", "qty": 5, "unit_price": 10.0, "line_no": 1}],
         })
         assert r.status_code == 400
+
+
+class TestUpdateSONotFound:
+    """L336: update_so 404 path"""
+
+    def test_update_so_not_found(self, client):
+        r = client.patch("/api/v1/so/NONEXIST", params={"status": "confirmed"})
+        assert r.status_code == 404
 
 
 class TestUpdateSORemarksOnly:

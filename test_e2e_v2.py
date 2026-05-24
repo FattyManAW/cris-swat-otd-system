@@ -5,9 +5,10 @@ OTD v2.0 深化測試套件 — Shipping / Invoice / Logistics
 執行：cd otd_erp_sim && python3 test_e2e_v2.py
 """
 
+import os
 import requests
 
-BASE = "http://localhost:8001"
+BASE = os.environ.get("BASE_URL", "http://100.107.36.80:8004")
 PASS = 0
 FAIL = 0
 
@@ -358,7 +359,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("OTD v2.0 深化測試套件 — Shipping / Invoice / Logistics")
     print("=" * 60)
-    print("(Ensuring server is running at http://localhost:8001)")
+    print(f"(Ensuring server is running at {BASE})")
     print()
 
     # Pre-flight

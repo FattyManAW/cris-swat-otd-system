@@ -5,9 +5,10 @@ OTD 端對端整合測試
 執行：cd otd_erp_sim && python3 test_e2e.py
 """
 
+import os
 import requests
 
-BASE = "http://localhost:8001"
+BASE = os.environ.get("BASE_URL", "http://100.107.36.80:8004")
 
 def req(method, path, **kwargs):
     url = f"{BASE}{path}"
