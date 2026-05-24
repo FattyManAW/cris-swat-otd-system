@@ -1,8 +1,12 @@
-"""OTD 測試共用 fixtures — TestClient + temp-file SQLite, one fresh DB per test"""
+"""OTD 測試共用 fixtures — TestClient + temp-file SQLite, one fresh DB per test
+
+Imports from erp_sim package so pytest-cov measures erp_sim/ coverage.
+"""
 import sys
 import os
 import tempfile
 
+# Ensure project root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
@@ -10,13 +14,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-# ── Module-level: patch models, but do NOT import main yet ──
-# main.py calls Base.metadata.create_all(bind=engine) at import time
-# so we defer that import until after we set up a per-test engine
+# ── Import from erp_sim package (not root) so coverage counts erp_sim/ ──
+import erp_sim.models as _models_mod
+import erp_sim.main as _main_mod
 
-import models as _models_mod
-
-# Don't create engine at module level; do it per-test
+# ── Don't import main yet; it auto-runs create_all ──
+# We'll import inside the fixture after patching the engine
 
 
 @pytest.fixture
@@ -25,7 +28,6 @@ def client():
     import tempfile
     import os
 
-    # 全新 temp db file per test
     fd, dbpath = tempfile.mkstemp(suffix=".db", prefix="otd_test_")
     os.close(fd)
     db_url = f"sqlite:///{dbpath}"
@@ -33,22 +35,23 @@ def client():
     _engine = create_engine(db_url, connect_args={"check_same_thread": False})
     _SessionLocal = sessionmaker(bind=_engine)
 
-    # patch models module
+    # patch erp_sim.models module — so ALL code using erp_sim.models gets our engine
     _models_mod.engine = _engine
     _models_mod.SessionLocal = _SessionLocal
 
-    from models import Base
+    # also patch the root models in case anything uses them (they're identical)
+    import models
+    models.engine = _engine
+    models.SessionLocal = _SessionLocal
+
+    from erp_sim.models import Base
     Base.metadata.create_all(bind=_engine)
 
-    # import main (triggers its own create_all on the already-set-up DB)
-    # Need to reload main to pick up the patched engine
-    import main as main_mod
-    # main_mod already did its own create_all via its module-level code
-    # But we need to re-patch its engine/SessionLocal for the override_get_db
-    main_mod.engine = _engine
-    main_mod.SessionLocal = _SessionLocal
+    # patch erp_sim.main too
+    _main_mod.engine = _engine
+    _main_mod.SessionLocal = _SessionLocal
 
-    from main import app, get_db
+    from erp_sim.main import app, get_db
 
     def override_get_db():
         db = _SessionLocal()
@@ -62,7 +65,6 @@ def client():
     with TestClient(app) as c:
         yield c
 
-    # cleanup
     os.unlink(dbpath)
 
 

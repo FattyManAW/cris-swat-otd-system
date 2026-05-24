@@ -15,8 +15,10 @@ class TestMainAppHealth:
         assert r.json()["ok"] is True
 
     def test_health(self, client):
-        r = client.get("/health")
+        # erp_sim/main.py only has /healthz, not /health
+        r = client.get("/healthz")
         assert r.status_code == 200
+        assert r.json()["ok"] is True
 
     def test_swagger_ui(self, client):
         r = client.get("/docs")
