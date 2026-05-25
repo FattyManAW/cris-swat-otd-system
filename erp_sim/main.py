@@ -177,6 +177,11 @@ def create_customer(data: CustomerCreate, db=Depends(get_db)):
 # 3. PO（採購單）
 # ════════════════════════════════════════════════════════════════════════════
 
+@app.get("/api/v1/po/count")
+def count_pos(db=Depends(get_db)):
+    return {"count": db.query(PurchaseOrder).count()}
+
+
 @app.get("/api/v1/po", response_model=list[PORead])
 def list_pos(db=Depends(get_db)):
     return db.query(PurchaseOrder).all()
