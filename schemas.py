@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from models import (
     ATPResult,
@@ -36,8 +36,7 @@ class ItemRead(BaseModel):
     daily_capacity: int
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Customer ────────────────────────────────────────────────────────────────
@@ -56,8 +55,7 @@ class CustomerRead(BaseModel):
     contact_email: Optional[str]
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── PO ──────────────────────────────────────────────────────────────────────
@@ -84,8 +82,7 @@ class PORead(BaseModel):
     status: POStatus
     remarks: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class POLineRead(BaseModel):
@@ -97,8 +94,7 @@ class POLineRead(BaseModel):
     delivery_date: Optional[datetime]
     line_no: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── SO ──────────────────────────────────────────────────────────────────────
@@ -128,8 +124,7 @@ class SORead(BaseModel):
     status: SOStatus
     remarks: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SOLineRead(BaseModel):
@@ -142,8 +137,7 @@ class SOLineRead(BaseModel):
     delivery_location: Optional[str]
     line_no: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── ATP / CTP ───────────────────────────────────────────────────────────────
@@ -214,8 +208,7 @@ class ShippingRead(BaseModel):
     ship_from_location: Optional[str] = None
     ship_to_address: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Shipping Pack Detail ────────────────────────────────────────────────────
@@ -244,8 +237,7 @@ class ShippingPackDetailRead(BaseModel):
     remarks: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Shipping Pack Partial ───────────────────────────────────────────────────
@@ -280,8 +272,7 @@ class ShippingAttachmentRead(BaseModel):
     uploaded_at: datetime
     uploaded_by: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Shipping Partial Ship/Deliver ───────────────────────────────────────────
@@ -349,8 +340,7 @@ class InvoiceRead(BaseModel):
     void_reason: Optional[str] = None
     credit_note_for: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Invoice Line ────────────────────────────────────────────────────────────
@@ -376,8 +366,7 @@ class InvoiceLineRead(BaseModel):
     amount: float
     so_line_id: Optional[int]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Invoice Issue / Payment / Void ──────────────────────────────────────────
@@ -439,8 +428,7 @@ class LogisticsRead(BaseModel):
     multi_leg: bool = False
     is_final_delivery: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Logistics Status Transition ─────────────────────────────────────────────
@@ -517,8 +505,7 @@ class LogisticsEventRead(BaseModel):
     created_by: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ════════════════════════════════════════════════════════════════════════════
