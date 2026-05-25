@@ -16,7 +16,7 @@ v2.0 (2026-05-21): Shipping/Invoice/Logistics 深化 — 28 新端點，3 status
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -359,7 +359,7 @@ def atp_check(
         raise HTTPException(404, f"料號 {req.item_code} 不存在")
 
     check_id = gen_id("ATP")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     available_qty = item.safety_stock
     lead_days = item.lead_time_days
 
@@ -415,7 +415,7 @@ def ctp_check(
         raise HTTPException(404, f"料號 {req.item_code} 不存在")
 
     check_id = gen_id("CTP")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     available_qty = item.safety_stock
     lead_days = item.lead_time_days
     daily_cap = item.daily_capacity
@@ -526,7 +526,7 @@ def do_ship(shipping_id: str, tracking_no: Optional[str] = None, db=Depends(get_
     s.status = ShippingStatus.PACKED if has_details and s.status != ShippingStatus.PACKED else s.status
     s.status = ShippingStatus.SHIPPED
     s.tracking_no = tracking_no or gen_id("TRK")
-    s.actual_ship_date = datetime.utcnow()
+    s.actual_ship_date = datetime.now(timezone.utc)
     db.commit()
     db.refresh(s)
     return s
@@ -625,7 +625,7 @@ def do_partial_ship(shipping_id: str, data: PartialShipRequest, db=Depends(get_d
     s.status = ShippingStatus.SHIPPED
     s.remaining_qty = data.remaining_qty
     s.remarks = data.remarks or s.remarks
-    s.actual_ship_date = s.actual_ship_date or datetime.utcnow()
+    s.actual_ship_date = s.actual_ship_date or datetime.now(timezone.utc)
     if data.remaining_qty > 0:
         s.partial_delivery = True
     db.commit()
@@ -664,7 +664,7 @@ def do_deliver(shipping_id: str, data: ShippingDeliverRequest = None, db=Depends
         raise HTTPException(400, f"出貨單 {shipping_id} 狀態為 {s.status}，需先出貨")
 
     s.status = ShippingStatus.DELIVERED
-    s.actual_arrive_date = datetime.utcnow()
+    s.actual_arrive_date = datetime.now(timezone.utc)
     s.is_delivery_signed = True
     if data:
         s.delivery_proof_url = data.delivery_proof_url or s.delivery_proof_url
@@ -732,7 +732,7 @@ def create_invoice(data: InvoiceCreate, db=Depends(get_db)):
         shipping_id=data.shipping_id,
         so_id=data.so_id,
         amount=data.amount,
-        issue_date=datetime.utcnow(),
+        issue_date=datetime.now(timezone.utc),
         status=InvoiceStatus.DRAFT,
         invoice_no=data.invoice_no,
         invoice_type=data.invoice_type,
@@ -778,7 +778,7 @@ def get_overdue_invoices(
     include_dunning: bool = Query(True),
     db=Depends(get_db),
 ):
-    cutoff = datetime.utcnow() - timedelta(days=days_overdue)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_overdue)
     statuses = [InvoiceStatus.SENT]
     if include_dunning:
         statuses.append(InvoiceStatus.DUNNING)
@@ -813,7 +813,7 @@ def issue_invoice(invoice_id: str, data: InvoiceIssueRequest = None, db=Depends(
         raise HTTPException(400, f"發票 {invoice_id} 狀態為 {inv.status}，無法開立")
 
     inv.status = InvoiceStatus.ISSUED
-    inv.issue_date = datetime.utcnow()
+    inv.issue_date = datetime.now(timezone.utc)
     if data:
         inv.invoice_no = data.invoice_no or inv.invoice_no
         inv.due_date = data.due_date or inv.due_date
@@ -845,7 +845,7 @@ def receive_payment(invoice_id: str, data: InvoicePaymentRequest = None, db=Depe
         raise HTTPException(400, f"發票 {invoice_id} 已收款")
 
     inv.status = InvoiceStatus.PAID
-    inv.payment_date = datetime.utcnow()
+    inv.payment_date = datetime.now(timezone.utc)
     if data:
         inv.payment_ref = data.payment_ref or inv.payment_ref
         if data.payment_date:
@@ -917,7 +917,7 @@ def _write_logistics_event(tracking_no: str, status: str, location: Optional[str
         status=status,
         location=location,
         note=note,
-        event_at=datetime.utcnow(),
+        event_at=datetime.now(timezone.utc),
         created_by=created_by or "system",
     )
     db.add(event)
@@ -996,7 +996,7 @@ def logistics_depart(tracking_no: str, data: LogisticsDepartRequest = None, db=D
         raise HTTPException(400, f"物流單 {tracking_no} 狀態為 {lg.status}，無法出發")
 
     lg.status = LogisticsStatus.IN_TRANSIT
-    lg.departure_date = datetime.utcnow()
+    lg.departure_date = datetime.now(timezone.utc)
     if data:
         if data.departure_date:
             lg.departure_date = data.departure_date
@@ -1080,7 +1080,7 @@ def confirm_arrival(tracking_no: str, data: LogisticsArriveRequest = None, db=De
         raise HTTPException(400, f"物流單 {tracking_no} 已送達")
 
     lg.status = LogisticsStatus.ARRIVED
-    lg.actual_arrival = datetime.utcnow()
+    lg.actual_arrival = datetime.now(timezone.utc)
     if data:
         if data.actual_arrival:
             lg.actual_arrival = data.actual_arrival
@@ -1134,7 +1134,7 @@ def logistics_deliver_sign(tracking_no: str, data: LogisticsDeliverSignRequest, 
         raise HTTPException(400, f"物流單 {tracking_no} 已簽收")
 
     lg.status = LogisticsStatus.DELIVERED
-    lg.actual_arrival = lg.actual_arrival or datetime.utcnow()
+    lg.actual_arrival = lg.actual_arrival or datetime.now(timezone.utc)
     lg.delivery_signed_by = data.signed_by
     lg.delivery_note = data.delivery_note or lg.delivery_note
     lg.is_final_delivery = data.is_final
@@ -1213,7 +1213,7 @@ def write_logistics_event_manual(tracking_no: str, data: LogisticsEventCreate, d
         status=data.status,
         location=data.location,
         note=data.note,
-        event_at=data.event_at or datetime.utcnow(),
+        event_at=data.event_at or datetime.now(timezone.utc),
         created_by=data.created_by or "agent",
     )
     db.add(event)

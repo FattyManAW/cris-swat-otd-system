@@ -8,7 +8,7 @@ After Service Agent — 售後服務專家
 
 import argparse
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
@@ -103,7 +103,7 @@ class AfterServiceAgent:
             "status": status,
             "action_taken": action,
             "next_step": next_step,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "agent": AGENT_NAME,
         }
 
@@ -119,7 +119,7 @@ class AfterServiceAgent:
             "order_ref": order_ref,
             "resolution": resolution,
             "status": "resolved",
-            "resolved_at": datetime.utcnow().isoformat(),
+            "resolved_at": datetime.now(timezone.utc).isoformat(),
             "agent": AGENT_NAME,
         }
 

@@ -1,7 +1,7 @@
 """OTD ERP 模擬層 - 資料模型 (v2.0 — Shipping/Invoice/Logistics Deepened)"""
 
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
@@ -100,8 +100,8 @@ class Item(Base):
     safety_stock = Column(Integer, default=0)
     daily_capacity = Column(Integer, default=1000)  # 每日最大產能
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # relationships
     so_lines = relationship("SOLine", back_populates="item")
@@ -116,7 +116,7 @@ class Customer(Base):
     terms = Column(String(50), default="Net30")
     contact_email = Column(String(100))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationships
     purchase_orders = relationship("PurchaseOrder", back_populates="customer")
@@ -128,11 +128,11 @@ class PurchaseOrder(Base):
 
     po_id = Column(String(50), primary_key=True)
     customer_id = Column(String(50), ForeignKey("customers.customer_id"), nullable=False)
-    po_date = Column(DateTime, default=datetime.utcnow)
+    po_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     status = Column(SAEnum(POStatus), default=POStatus.PENDING)
     remarks = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # relationships
     customer = relationship("Customer", back_populates="purchase_orders")
@@ -150,7 +150,7 @@ class POLine(Base):
     unit_price = Column(Float, default=0.0)
     delivery_date = Column(DateTime)
     line_no = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationships
     po = relationship("PurchaseOrder", back_populates="lines")
@@ -163,11 +163,11 @@ class SalesOrder(Base):
     so_id = Column(String(50), primary_key=True)
     po_id = Column(String(50), ForeignKey("purchase_orders.po_id"), nullable=True)
     customer_id = Column(String(50), ForeignKey("customers.customer_id"), nullable=False)
-    so_date = Column(DateTime, default=datetime.utcnow)
+    so_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     status = Column(SAEnum(SOStatus), default=SOStatus.DRAFT)
     remarks = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # relationships
     po = relationship("PurchaseOrder", back_populates="so")
@@ -188,7 +188,7 @@ class SOLine(Base):
     delivery_date = Column(DateTime)
     delivery_location = Column(String(200))
     line_no = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationships
     so = relationship("SalesOrder", back_populates="lines")
@@ -206,7 +206,7 @@ class ATPCheck(Base):
     available_qty = Column(Integer)
     result = Column(SAEnum(ATPResult), nullable=False)
     remarks = Column(Text)
-    checked_at = Column(DateTime, default=datetime.utcnow)
+    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class CTPCheck(Base):
@@ -221,7 +221,7 @@ class CTPCheck(Base):
     result = Column(SAEnum(ATPResult), nullable=False)
     batch_recommended = Column(Integer, default=0)
     remarks = Column(Text)
-    checked_at = Column(DateTime, default=datetime.utcnow)
+    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -252,8 +252,8 @@ class Shipping(Base):
     ship_from_location = Column(String(200)) # 出貨地點
     ship_to_address = Column(Text)           # 送達地址（同步自 SO）
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # relationships
     so = relationship("SalesOrder", back_populates="shippings")
@@ -277,7 +277,7 @@ class ShippingPackDetail(Base):
     weight_kg = Column(Float)
     dimensions_cm = Column(String(50))
     remarks = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationship
     shipping = relationship("Shipping", back_populates="pack_details")
@@ -292,7 +292,7 @@ class ShippingAttachment(Base):
     type = Column(String(20), nullable=False)  # pod/photo/doc/other
     filename = Column(String(200), nullable=False)
     url = Column(Text)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     uploaded_by = Column(String(50))          # agent id
 
     # relationship
@@ -323,7 +323,7 @@ class Invoice(Base):
     void_reason = Column(Text)                       # 作廢原因
     credit_note_for = Column(String(50))             # 關聯折讓單號
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationships
     shipping = relationship("Shipping", back_populates="invoices")
@@ -344,7 +344,7 @@ class InvoiceLine(Base):
     unit_price = Column(Float)
     amount = Column(Float)                     # qty × unit_price
     so_line_id = Column(Integer)               # 關聯 SO 單身
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationship
     invoice = relationship("Invoice", back_populates="lines")
@@ -374,8 +374,8 @@ class Logistics(Base):
     multi_leg = Column(Boolean, default=False)    # 是否多段運輸
     is_final_delivery = Column(Boolean, default=False)  # 是否最終送達
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # relationships
     shipping = relationship("Shipping", back_populates="logistics")
@@ -393,7 +393,7 @@ class LogisticsEvent(Base):
     note = Column(Text)
     event_at = Column(DateTime, nullable=False)
     created_by = Column(String(50))              # agent id
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # relationship
     logistics = relationship("Logistics", back_populates="events")
