@@ -2,8 +2,8 @@
 
 Imports from erp_sim package so pytest-cov measures erp_sim/ coverage.
 """
-import sys
 import os
+import sys
 import tempfile
 
 # Ensure project root is importable
@@ -14,9 +14,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+import erp_sim.main as _main_mod
+
 # ── Import from erp_sim package (not root) so coverage counts erp_sim/ ──
 import erp_sim.models as _models_mod
-import erp_sim.main as _main_mod
 
 # ── Don't import main yet; it auto-runs create_all ──
 # We'll import inside the fixture after patching the engine
@@ -25,7 +26,6 @@ import erp_sim.main as _main_mod
 @pytest.fixture
 def client():
     """每個 test: 全新 SQLite file + 全新 import main"""
-    import tempfile
     import os
 
     fd, dbpath = tempfile.mkstemp(suffix=".db", prefix="otd_test_")

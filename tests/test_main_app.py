@@ -1,6 +1,7 @@
 """main.py (root) 完整 OTD lifecycle 測試 — TestClient (不需要真實 HTTP)"""
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 
 
 class TestMainAppHealth:
@@ -113,7 +114,7 @@ class TestOrderLifecycle:
         assert r.status_code == 200
 
         # 9. Pack detail
-        r = client.patch(f"/api/v1/shipping/SH-X1/pack_detail", json=[
+        r = client.patch("/api/v1/shipping/SH-X1/pack_detail", json=[
             {"pallet_no": 1, "line_no": 1, "item_code": "CPU-X1", "qty_packed": 50, "qty_shipped": 50,
              "weight_kg": 25.0, "dimensions_cm": "120x80x60"},
             {"pallet_no": 2, "line_no": 1, "item_code": "CPU-X1", "qty_packed": 50, "qty_shipped": 50,
@@ -122,7 +123,7 @@ class TestOrderLifecycle:
         assert r.status_code == 200
 
         # 10. Ship
-        r = client.patch(f"/api/v1/shipping/SH-X1/ship?tracking_no=TRK-X1")
+        r = client.patch("/api/v1/shipping/SH-X1/ship?tracking_no=TRK-X1")
         assert r.status_code == 200
         assert r.json()["status"] == "shipped"
 
@@ -255,7 +256,8 @@ class TestMainSOCRUD:
         })
         # The app doesn't expose a cancel-PO PATCH, but we can test the CANCELLED guard
         # via SQLAlchemy direct: set status to CANCELLED, then try convert
-        from erp_sim.models import SessionLocal as SL, PurchaseOrder, POStatus
+        from erp_sim.models import POStatus, PurchaseOrder
+        from erp_sim.models import SessionLocal as SL
         db = SL()
         try:
             po = db.query(PurchaseOrder).filter(PurchaseOrder.po_id == "PO-CC2").first()

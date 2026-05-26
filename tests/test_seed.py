@@ -118,7 +118,7 @@ class TestSeedAll:
 
         db = sl()
         try:
-            from models import PurchaseOrder, POLine
+            from models import POLine, PurchaseOrder
             assert db.query(PurchaseOrder).count() > 0
             assert db.query(POLine).count() > 0
         finally:

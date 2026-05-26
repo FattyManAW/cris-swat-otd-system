@@ -1,26 +1,56 @@
 """Models + schemas validation tests"""
-import pytest
 from datetime import datetime
 
+import pytest
+from pydantic import ValidationError
+
 from models import (
-    Item, Customer, PurchaseOrder, POLine, SalesOrder, SOLine,
-    ATPCheck, CTPCheck, ATPResult,
-    POStatus, SOStatus, ShippingStatus, InvoiceStatus, LogisticsStatus,
-    Shipping, ShippingPackDetail, ShippingAttachment,
-    Invoice, InvoiceLine, Logistics, LogisticsEvent,
+    ATPCheck,
+    ATPResult,
+    CTPCheck,
+    Customer,
+    Invoice,
+    InvoiceLine,
+    InvoiceStatus,
+    Item,
+    Logistics,
+    LogisticsEvent,
+    LogisticsStatus,
+    POLine,
+    POStatus,
+    PurchaseOrder,
+    SalesOrder,
+    Shipping,
+    ShippingAttachment,
+    ShippingPackDetail,
+    ShippingStatus,
+    SOLine,
+    SOStatus,
 )
 from schemas import (
-    ItemCreate, ItemRead,
-    CustomerCreate, CustomerRead,
-    POCreate, POLineCreate, PORead, POLineRead,
-    SOCreate, SOLineCreate, SORead, SOLineRead,
-    ATPRequest, ATPResponse,
+    ATPRequest,
+    ATPResponse,
+    CustomerCreate,
+    CustomerRead,
+    InvoiceCreate,
+    InvoiceLineCreate,
+    ItemCreate,
+    ItemRead,
+    LogisticsCreate,
+    LogisticsDepartRequest,
     OkResponse,
-    ShippingCreate, ShippingPackDetailCreate, ShippingPackPartialRequest,
-    InvoiceCreate, InvoiceLineCreate,
-    LogisticsCreate, LogisticsDepartRequest,
+    POCreate,
+    POLineCreate,
+    POLineRead,
+    PORead,
+    ShippingCreate,
+    ShippingPackDetailCreate,
+    ShippingPackPartialRequest,
+    SOCreate,
+    SOLineCreate,
+    SOLineRead,
+    SORead,
 )
-from pydantic import ValidationError
 
 
 class TestItemSchema:

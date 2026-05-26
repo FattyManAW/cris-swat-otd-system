@@ -3,11 +3,11 @@
 AfterServiceAgent, ATPCTPAgent, CustomerServiceAgent, LogisticsAgent, POtoSOAgent
 """
 
-import pytest
 import json
-from unittest.mock import Mock, patch, PropertyMock
 from datetime import datetime
+from unittest.mock import Mock, PropertyMock, patch
 
+import pytest
 
 # ════════════════════════════════════════════════════════════════════════════
 # Shared mock utilities
@@ -256,9 +256,8 @@ class TestAfterServiceAgent:
         """Ensure the __main__ block code is reached"""
         # Run main() with controlled argv to cover __main__ block
         from agents.after_service_agent import agent as mod
-        with patch.object(mod, 'demo'):
-            with patch('sys.argv', ['agent.py', '--demo']):
-                mod.main()
+        with patch.object(mod, 'demo'), patch('sys.argv', ['agent.py', '--demo']):
+            mod.main()
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -476,9 +475,8 @@ class TestATPCTPAgent:
 
     def test_module_main_covers_atp_block(self):
         from agents.atp_ctp_agent import agent as mod
-        with patch.object(mod, 'demo'):
-            with patch('sys.argv', ['agent.py', '--demo']):
-                mod.main()
+        with patch.object(mod, 'demo'), patch('sys.argv', ['agent.py', '--demo']):
+            mod.main()
 
 
 # ════════════════════════════════════════════════════════════════════════════

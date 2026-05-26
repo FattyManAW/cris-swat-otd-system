@@ -6,6 +6,7 @@ OTD v2.0 深化測試套件 — Shipping / Invoice / Logistics
 """
 
 import os
+
 import requests
 
 BASE = os.environ.get("BASE_URL", "http://100.107.36.80:8004")

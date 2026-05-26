@@ -1,6 +1,7 @@
 """erp_sim conftest — patches erp_sim.models for per-test DB"""
-import sys
 import os
+import sys
+
 import pytest
 
 # Ensure project root is importable
@@ -8,9 +9,9 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
 
 import erp_sim.models as _erp_mod
 
